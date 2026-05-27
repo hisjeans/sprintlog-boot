@@ -6,12 +6,16 @@ spring:
   application:
     name: sprintlog-boot
 
+profiles:
+  active: prod # prod로 변경하면 적재하지 않았다고 표기됨
+  # 공통 내용과 겹치는 건 dev쪽 우선
+
 server:
   port: 8080
 
 sprintlog:
   welcome-message: "SprintLog Boot - 외부 설정 시연(기본)"
   sample-data:
-    enabled: false
-    count: 4
+    enabled: true
+    count: "4"
 

@@ -38,10 +38,7 @@ public class SprintlogBootApplication {
             ActivityPrinter defaultPrinter, // 전달되는 printer는 condoleprinter가 될 것, compact printer로 바꾸고 싶다면 @Qualifier("compact")해야
             List <ActivityPrinter> allPrinters,
             Map<String, ActivityPrinter> printersByName,
-			@Value("${sprintlog.welcome-message}") String welcomeMessage,
-			@Value("${spring.application.name}") String applicationName,
-			@Value("${sprintlog.sample-data.count}") int count,
-			@Value("${sprintlog.sample-data.enabled}") boolean enabled) {
+			@Value("${sprintlog.welcome-message}") String welcomeMessage) {
 			// 객체 생성
 			// 의존성 주입 DI
 			// 스프링이 Bean 등록된 객체 보내줌
@@ -61,10 +58,15 @@ public class SprintlogBootApplication {
 
 
 			System.out.println();
-			System.out.println(welcomeMessage);
+			// System.out.println(welcomeMessage);
 			// 숨길 수 있는 방법이 지우는 것 말고 없을까?
 			// 예: 데이터 아이디, 비밀번호 같은 값들을 숨기고 싶다, 외부에서 세팅하고 값을 가져오고 싶다
 			// => yml 파일과의 연동
+			System.out.println("── Repository 상태 (Profile 별 Initializer 가 결정) ──");
+			System.out.println("  활동 수: " + repository.count() + "개");
+			for (LearningActivity activity : repository.findAll()) {
+				defaultPrinter.print(activity);
+			}
 
 
 			System.out.println();

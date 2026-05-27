@@ -1,0 +1,16 @@
+# 프로필이 dev일 때만 동작하는 yml 파일
+# 개발 환경 (dev profile) 추가 설정
+# application.yml 의 값들을 덮어쓰거나 보강
+sprintlog:
+  welcome-message: "SprintLog Boot - PRODUCTION (운영 환경)"
+  sample-data:
+    enabled: false # 샘플데이터 자동 적재하지 말자
+    # 2차 안전망 느낌, 외부에서 빼서 쓰지 못하도록 함
+    count: "4"
+
+# 개발 시에는 자세한 로그가 도움됨
+logging:
+  level:
+    com.sprintlog: warn
+    # 운영환경에서는 경고 이상의 레벨만 보겠다는 의미에서 'warn'
+    # "dev" 는 너무 상세하게 다 나오기 때문에 변경한 것
