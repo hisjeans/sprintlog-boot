@@ -1,8 +1,11 @@
 package com.sprintlog.sprintlogboot.domain;
 
 
+import lombok.Getter;
+
 import java.io.Serializable;
 
+@Getter
 public class ReadingLog extends LearningActivity implements Serializable {    //추상클래스
     //부모가 가진 껍데기 메서드를 자식이 구현하지 않으면 에러->문법적으로 강음
 
@@ -21,8 +24,4 @@ public class ReadingLog extends LearningActivity implements Serializable {    //
 
     }
 
-
-    public String getBookTitle(){
-        return bookTitle;
-    }
 }

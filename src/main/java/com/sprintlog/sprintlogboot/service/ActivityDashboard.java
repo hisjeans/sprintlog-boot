@@ -4,30 +4,28 @@ package com.sprintlog.sprintlogboot.service;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+// final로 선언된 필드만 받는 생성자를 자동으로 만들어줌
+// 반드시 요구되는 매개값을 받는 생성자를 lombok이 만들어줌
+// 코드상으로는 보이지 않지만 컴파일 과정에서 lombok이 final 필드 초기화할 수 있는 생성자 만들어줄 것
+// @NoArgsConstructor 매개값이 없는 기본 형태의 생성자도 만들어줄 수 있음
+// 현재 만들어줄 수 없는 이유: constructor는 생성자(객체 만드는 역할),
+// 기본 생성자는 매개값이 하나도 없는 생성자, 이 모양대로 객체를 생성하면 final 필드를 누가 초기화? - 로직을 쓰면 가능은 하나 이는 기본 생성자 아님
+// @AllArgsConstructor 모든 생성자
 @Service // 빈 등록 어노테이션, @Component와 기능은 똑같고 계층을 좀 더 명시적으로 표기
+@RequiredArgsConstructor
 public class ActivityDashboard {
 
-    private final ActivityRepository repository;
+    private final ActivityRepository repository; // to 불변 객체
 
     // 의존성 자동 주입, ActivityRepository가 ActivityRepository에 의존하고 있는 상황
     // 생성자를 통해 ActivityRepository를 전달 받을 때 컨테이너에서 검색해 주입해줄 것
-    @Autowired
-    public ActivityDashboard(ActivityRepository repository) {
-        if(repository==null){
-            throw new IllegalArgumentException("학습 활동 목록은 null일 수 없습니다.");
-        }
-        this.repository = repository;
-    } // ActivityDashboard가 따로 리스트를 들고 있는 것보다
-    // ActivityRepository가 리스트가 세팅되어 있기 때문에 생성자로 레파지토리를 받아 사용하자
-    // ActivityDashboard가 ActivityRepository에 의존
-    // ActivityRepository도 @Repository로 bean 등록한 상태
-    // (객체 생성해 부른 것, 생성자는 객체 필요, 객체 하나를 만들기 위해 다른 객체가 또 필요한 상태)
-    // ActivityService <- ActivityRepository가 ActivityDashboard 의존성 가짐, 의존성 주입
+    // 객체는 spring이 컨테이너 안에 있는 activity repository 꺼내줄 것(DI)
+    // 생성자 지움
 
     //내부 클래스에 static을 붙이는 이유는 메모리 누수를 방지하고 독립성을 가지기 위해
     //static이 없다면 메모리에 있는 객체와 강하게 연결됨 반드시 ActivityDashboard 바깥의 객체가 먼저 생성되어야 summary객체 생성 가능, 강한 연결성

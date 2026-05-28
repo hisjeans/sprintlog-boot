@@ -1,6 +1,7 @@
 package com.sprintlog.sprintlogboot.domain;
 
 import com.sprintlog.sprintlogboot.exception.InvalidActivityException;
+import lombok.Getter;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -9,6 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 //객체 생성을 위한 설계도 클래스에는 main 메서드를 작성하지 않음
+@Getter
 public abstract class LearningActivity implements Serializable {//abstract 추가, 추상 메서드 가진 추상 클래스
 //extends Object는 따로 쓰지 않더라도 컴파일 과정에서 자동으로 들어감
 
@@ -167,46 +169,6 @@ public abstract class LearningActivity implements Serializable {//abstract 추�
     public void hideFromPublic() {
         this.visibility = Visibility.PRIVATE; //true, false 보다 문맥상 명확
 
-    }
-
-
-    //외부로 필드값을 돌려주는 getter 메서드
-    //get+필드이름으로 지어주는 것이 관례
-    //boolean 타입의 값을 돌려주는 getter는 is로 시작하도록 이름 지음
-    //값을 변경하고 싶지 않을 때, private으로 막고 의도적으로 setter 메서드를 제공하지 않는 경우도 존재
-    public long getId() {
-
-        return id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-
-    public int getMinutes() {
-        return minutes;
-    }
-
-    //boolean 타입->Visibility 타입
-    public Visibility getVisibility() {
-        return visibility;
-    }
-
-    //->public, private
-    public String getVisibilityText() {
-        //return visibility==Visibility.PUBLIC? "공개":"비공개"; is 생략된 것
-        //PUBLIC, PRIVATE 상수 자체가 label에 "공개", "비공개" string값 �
-        return visibility.getLabel();
-
-    }
-
-    public boolean isPublicActivity() {
-        return visibility == Visibility.PUBLIC;
-    }
-
-    public ActivityCategory getCategory() {
-        return category;
     }
 
 }

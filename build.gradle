@@ -20,6 +20,13 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// [신규] Lombok
+	compileOnly 'org.projectlombok:lombok' // 컴파일되는 시점에서만 사용
+	annotationProcessor 'org.projectlombok:lombok' // lombok 대부분 annotation 사용하는 경우 많음
+
+	// 테스트 코드에서도 Lombok 사용
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

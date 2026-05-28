@@ -1,8 +1,11 @@
 package com.sprintlog.sprintlogboot.domain;
 
 
+import lombok.Getter;
+
 import java.io.Serializable;
 
+@Getter
 public class LectureLog extends LearningActivity implements Serializable {
     //extends 연장, 확장
     //LerningActivity 물려받음
@@ -16,7 +19,7 @@ public class LectureLog extends LearningActivity implements Serializable {
 
 
 
-    public String instructorName;
+    private String instructorName;
     // 강사 이름 (LectureLog만이 고유하게 가지는 필드)
 
     // -> enum 타입으로 변경
@@ -42,10 +45,5 @@ public class LectureLog extends LearningActivity implements Serializable {
     }
 
 
-
-    public String getInstructorName(){
-        return instructorName;
-    }
-    // getter 추가
 
 }
