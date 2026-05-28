@@ -170,17 +170,6 @@ public abstract class LearningActivity implements Serializable {//abstract 추�
     }
 
 
-    public abstract String getActivityType(); //강의, 실습, 독서
-
-    public abstract String getDetailText(); //유형별 세부 정보
-
-//needsReview는 reviewable이 그 역할을 대신할
-
-    //get+이름: getter 관례
-    //getTitle 단축
-
-
-
     //외부로 필드값을 돌려주는 getter 메서드
     //get+필드이름으로 지어주는 것이 관례
     //boolean 타입의 값을 돌려주는 getter는 is로 시작하도록 이름 지음

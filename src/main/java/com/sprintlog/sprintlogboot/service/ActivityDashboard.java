@@ -3,10 +3,8 @@ package com.sprintlog.sprintlogboot.service;
 
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
-import com.sprintlog.sprintlogboot.printer.ActivityPrinter;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -117,50 +115,6 @@ public class ActivityDashboard {
         }
     }
 
-
-    /**
-     * 보고서 출력기
-     * 외부 클래스(ActivityDashboard)가 가지고 있는 activities 배열에 접근해야 하기 때문에
-     * static을 붙이지 않은 멤버 내부 클래스로 선언.
-     */
-
-    public class ReportBuilder {
-        //static 붙이면 정적 내부 클래스, 붙이지 않으면
-        private final ActivityPrinter printer;
-
-        // ReportBuilder가 ActivityPrinter에 의존
-        // ActivityPrinter 타입을 가질 수 있는 Bean이 두 개 (console, compact)
-        // Spring은 어떤 Bean을 주입해야 할 지 판단할 수 없음
-        // 전달할 수 있는 객체 두 개가 되면서 console, compact 구분 불가능, 에러 발생
-        // ConsoleActivityPrinter, CompactActivityPrinter가 같은 타입을 띠고 있기 때문에
-        // @Qualifier를 통해 어떤 Bean을 주입할 지를 지목할 수 있음
-        // ActivityPrinter에 의존, printer에 null이 들어가면 실행되지 않을 것
-        public ReportBuilder(@Qualifier("console") ActivityPrinter printer) { //<- compact(간략한 정보), console(상세한 정보) 들어올 수 있음
-            if (printer == null) { //final 변수는 값의 변경을 막음
-                //null이 printer 필드에 세팅되면서 절대 바뀔 수 없는 값됨
-                //null pointer exception 발생 가능
-                throw new IllegalArgumentException("출력 도구는 null일 수 없습니다."); //예외 생성
-
-            }
-            this.printer = printer;
-        }
-
-        public void print() {//reportbuilder의 메소드
-            Summary summary = summarize();  // 외부 클래스(Dashboard)의 summarize() 호출
-            System.out.println("── 활동 수: 총 " + summary.getTotalCount()
-                    + "개 (강의 " + summary.getLectureCount()
-                    + " / 실습 " + summary.getPracticeCount()
-                    + " / 독서 " + summary.getReadingCount() + ")");
-
-            for (LearningActivity activity : repository.findAll()) {  // 외부 클래스의 activities 직접 접근 가능
-                printer.print(activity);
-            }
-        } //summary는 쓸 수 없는 부분(dashboard 메서드, 필드 사용 불가능) because static하기 때문, dashboard 없이도 static하기 때문, dashboard 실체가 없음
-
-
-
-
-    }
 
     //카테고리별 그룹화------------------------------------------------------------
     // 카테고리별로 활동(Log)를 그룹화해 Map으로 반환

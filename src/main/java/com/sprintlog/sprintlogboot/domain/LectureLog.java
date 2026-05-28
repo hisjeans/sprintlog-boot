@@ -1,13 +1,9 @@
 package com.sprintlog.sprintlogboot.domain;
 
 
-import com.sprintlog.sprintlogboot.policy.Reviewable;
-import com.sprintlog.sprintlogboot.policy.Shareable;
-
 import java.io.Serializable;
 
-
-public class LectureLog extends LearningActivity implements Reviewable, Shareable, Serializable {
+public class LectureLog extends LearningActivity implements Serializable {
     //extends 연장, 확장
     //LerningActivity 물려받음
     //LectureLog 자식 LearningActivity 부모
@@ -35,16 +31,6 @@ public class LectureLog extends LearningActivity implements Reviewable, Shareabl
 
 
 
-    @Override
-    public boolean needsReview(){
-        return getCategory().isShortStudy(getMinutes());
-    }
-
-    @Override
-    public void printReviewTarget(){
-        System.out.println("[복습 권장] " + getTitle() + " (" + getMinutes() + "분)");
-    }
-
 
     //이 메서드는 부모가 물려준 게 아닌 자식 고유의 기능(instructorName은 부모가 처리해줄 수 없음)
     //because 부모는 자식의 내용 알 수 없음
@@ -55,25 +41,6 @@ public class LectureLog extends LearningActivity implements Reviewable, Shareabl
         return instructorName; //null이 아니거나 공백도 아니라면
     }
 
-    @Override
-    public boolean canShare(){
-        return isPublicActivity();
-    }
-
-    @Override
-    public String getSharTitle(){
-        return getTitle();
-    }
-
-    @Override
-    public String getActivityType(){
-        return "강의";
-    }
-
-    @Override
-    public String getDetailText(){
-        return "강사: "+instructorName;
-    }
 
 
     public String getInstructorName(){

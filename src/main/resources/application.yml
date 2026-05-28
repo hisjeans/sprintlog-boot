@@ -7,7 +7,7 @@ spring:
     name: sprintlog-boot
 
 profiles:
-  active: prod # prod로 변경하면 적재하지 않았다고 표기됨
+  active: dev # prod로 변경하면 적재하지 않았다고 표기됨
   # 공통 내용과 겹치는 건 dev쪽 우선
 
 server:
