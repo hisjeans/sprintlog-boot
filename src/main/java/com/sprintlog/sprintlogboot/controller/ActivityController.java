@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,13 +40,29 @@ public class ActivityController {
     }
 
 
-    // 모든 활동 목록
+    // 모든 활동 목록(페이징)
     @GetMapping // 요청 들어오면 get 메서드 세팅해줄 것
-    public ResponseEntity<List<LearningActivity>> getAll(){
+    public ResponseEntity<List<LearningActivity>> getAll(
+            @RequestParam(defaultValue = "id") String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ){
+        // 게시판에 처음 들어왔을 때 데이터 전달되지 않을 가능성 크기 때문에 기본 값 설정
+
+        Comparator<LearningActivity> comparator=switch (sort){
+            case "minutes" -> Comparator.comparingInt(LearningActivity::getMinutes);
+            case "title" -> Comparator.comparing(LearningActivity::getTitle);
+            default -> Comparator.comparing(LearningActivity::getId); // "minutes", "title" 아닌 이상한 값이 들어오더라도 -> id로 비교
+        };
         // 자바 이해하지 못할 수 있기 때문에 리스트를 json으로 변환해줘야 함
         // => @ResponseBody 리턴하고자하는 리스트를 json으로 변환해 리턴해주는 역할
 
-        List<LearningActivity> list = repository.findAll();
+        List<LearningActivity> list = repository.findAll().stream()
+                .sorted(comparator)
+                .skip(page*size) // 0페이지면 0개 건너뛰고 size개(첫번째 페이지는 스킵하지 않는다), 1페이지면 size개 건너뛰고 size개
+                .limit(size)
+                .toList();
+
         return ResponseEntity.ok().body(list); // 바로 list로 리턴되지 않고 ResponseEntity로 감쌌다 생각
     }
 
