@@ -21,6 +21,7 @@ repositories {
 dependencies {
 	// implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-validation' // 유효성 검증할 수 있는 validation 라이브러리
 	// [신규] Lombok
 	compileOnly 'org.projectlombok:lombok' // 컴파일되는 시점에서만 사용
 	annotationProcessor 'org.projectlombok:lombok' // lombok 대부분 annotation 사용하는 경우 많음

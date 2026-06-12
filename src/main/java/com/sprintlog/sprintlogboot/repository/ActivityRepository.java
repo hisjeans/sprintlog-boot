@@ -4,10 +4,6 @@ package com.sprintlog.sprintlogboot.repository;
 import com.sprintlog.sprintlogboot.domain.*;
 import org.springframework.stereotype.Repository;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,6 +20,15 @@ public class ActivityRepository {
             throw new IllegalArgumentException("저장할 활동은 null일 수 없습니다.");
         }
         storage.add(activity);
+    }
+
+    public void update(LearningActivity activity){
+        if (activity==null){
+            throw new IllegalArgumentException("수정할 활동은 null일 수 없습니다."); // 사실 서비스 단에서 검증해야 하는 부분, 레파지토리 단에서는 이루어지지 않지만 현재 서비스가 없으므로 추가함
+        }
+        storage.remove(activity);
+        storage.add(activity);
+        // set도 가능은 하나 인덱스를 찾아야 하는 번거로움 때문에 remove로 기존 객체 삭제 요청 후 다시 add 요청하자
     }
 
     // 저장된 모든 활동을 반환한다.
@@ -67,6 +72,11 @@ public class ActivityRepository {
     }
 
 
+    // removeIf: 조건에 맞는 객체를 리스트에서 삭제 후 true를 리턴, 해당 id를 가진 활동이 없다면 false를 리턴
+    public boolean removeById(Long id) {
+        return storage.removeIf(activity -> activity.getId() == id);
+        // 조건식 단 한 번도 동작하지 않으면 false return
+    }
 }
 
 

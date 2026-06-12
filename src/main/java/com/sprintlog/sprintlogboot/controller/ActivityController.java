@@ -1,21 +1,24 @@
 package com.sprintlog.sprintlogboot.controller;
 
-import com.sprintlog.sprintlogboot.domain.ActivityCategory;
-import com.sprintlog.sprintlogboot.domain.LearningActivity;
+import com.sprintlog.sprintlogboot.domain.*;
+import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
+import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 // 컨트롤러 자체에 공통 url 매핑하는 것이 가능
-@RestController// Response body 내장
+@RestController// Response body 내장, 메서드 마다 @ResponseBody(json 변환) 일일이 붙일 필요 없게 됨
 @Slf4j
 @RequiredArgsConstructor
 @RequestMapping("/api/activities") // 컨트롤러 쪽에 공통 url 매핑, 기본적으로 "/api/activities" 으로 시작하도록 지정
@@ -105,6 +108,64 @@ public class ActivityController {
         return ResponseEntity.ok().body(list);
     }
 
+    // -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
+
+    @PostMapping // 요청 post
+    public ResponseEntity<LearningActivity> create(@Valid @RequestBody CreateActivityRequest request){ // @Valid 없으면 CreateActivityController 안에 있는 유효성 검증 동작하지 않는다
+        // client는 react로 이루어져 있어 그대로 전달하지 않고 JSON 형태로 전달, createActivityRequest 형태 전달하고 싶은데 변환할 수 있을까
+        // Java->Json @ResponseBody
+        // JSON->Java @RequestBody
+        // 요청 본문에 들어있는 JSON을 자바로 변환
+        LearningActivity activity=toActivity(request);
+        repository.add(activity); // 원래는 서비스가 담당
+
+        // 성공 시 201 Created + Location 헤더(생성된 자원의 주소)를 함께 응답
+        URI location = URI.create("/api/activities" + activity.getId());
+        return ResponseEntity.created(location).body(activity);
+    }
+
+    // 활동 수정, 자원 식별은 Path(/{id}) - 수정할 때는 어떤 객체를 변경할 것인지 지목해줘야 하기 때문
+    // 변경할 내용은 본문 (UpdatedActivityRequest)
+    // 대상이 없으면 404, 있으면 제목, 공개여부 변경하고 200
+    @PatchMapping("/{id}")
+    public ResponseEntity<LearningActivity> updateActivity(@PathVariable Long id,
+                                                           @Valid @RequestBody UpdateActivityRequest request){
+        Optional<LearningActivity> found = repository.findFirst(activity -> activity.getId() == id);
+                // .orElseThrow(()->new IllegalArgumentException("해당 활동을 찾을 수 없습니다.")); 서비스 단에서 적합한 로직
+        if (found.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }
+        LearningActivity activity = found.get();
+        activity.changTitle(request.title());
+        if (request.visibility()==Visibility.PUBLIC){
+            activity.openToPublic();
+        } else {
+            activity.hideFromPublic();
+        }
+        repository.update(activity);
+        return ResponseEntity.ok().body(activity);
+
+    }
+
+    // 활동 삭제, 성공 시 본문 없이 204 No Content, 대상이 없으면 404
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id){ // 바디에 담는 데이터 없다, 전달하고자 하는 값 없기 때문에 Void 선언
+        boolean isRemoved = repository.removeById(id);
+        return isRemoved ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+    }
+
+    // valid 검사 후 부르기 때문에 @valid 또 부를 필요 없다
+    private LearningActivity toActivity(CreateActivityRequest request) {
+        LearningActivity activity=switch (request.type()){
+            case LECTURE -> new LectureLog(request.title(), request.minutes(), request.visibility(), request.instructorName());
+            case PRACTICE -> new PracticeLog(request.title(), request.minutes(), request.visibility(), request.completionRate());
+            case READING -> new ReadingLog(request.title(), request.minutes(), request.visibility(), request.bookTitle());
+        };
+        if (request.tags()!=null){
+            request.tags().forEach(activity::addTag);
+        }
+        return activity;
+    } // 나중에 서비스 로직으로 옮길 것
 }
 // 예전 방식
 // 요즈음은 순수 html 방식 사용 적음
