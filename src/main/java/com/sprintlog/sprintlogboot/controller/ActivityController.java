@@ -2,6 +2,7 @@ package com.sprintlog.sprintlogboot.controller;
 
 import com.sprintlog.sprintlogboot.domain.*;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
+import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
@@ -70,14 +71,10 @@ public class ActivityController {
     }
 
     @GetMapping("/{id}") // "id" <- 1,2,3,4 요청을 보내는 쪽에서 보내는 데이터
-    public ResponseEntity<LearningActivity> getById(@PathVariable("id") Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
-        Optional<LearningActivity> first = repository.findFirst(activity -> activity.getId() == id);
-        if (first.isPresent()){
-            // 응답관련 여러 정보 담아 리턴 ResponseEntity
-            return ResponseEntity.ok().body(first.get());
-        }
-
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<LearningActivity> getById(@PathVariable Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
+        LearningActivity activity = repository.findFirst(a -> a.getId() == id)
+                .orElseThrow(() -> new ActivityNotFoundException(id));
+        return ResponseEntity.ok().body(activity);
     }
 
     // 카테고리별로 그룹화된 활동 목록
@@ -128,14 +125,11 @@ public class ActivityController {
     // 변경할 내용은 본문 (UpdatedActivityRequest)
     // 대상이 없으면 404, 있으면 제목, 공개여부 변경하고 200
     @PatchMapping("/{id}")
-    public ResponseEntity<LearningActivity> updateActivity(@PathVariable Long id,
+    public ResponseEntity<LearningActivity> update(@PathVariable Long id,
                                                            @Valid @RequestBody UpdateActivityRequest request){
-        Optional<LearningActivity> found = repository.findFirst(activity -> activity.getId() == id);
-                // .orElseThrow(()->new IllegalArgumentException("해당 활동을 찾을 수 없습니다.")); 서비스 단에서 적합한 로직
-        if (found.isEmpty()){
-            return ResponseEntity.notFound().build();
-        }
-        LearningActivity activity = found.get();
+        LearningActivity activity = repository.findFirst(a -> a.getId() == id)
+                .orElseThrow(() -> new ActivityNotFoundException(id));
+
         activity.changTitle(request.title());
         if (request.visibility()==Visibility.PUBLIC){
             activity.openToPublic();
@@ -150,8 +144,11 @@ public class ActivityController {
     // 활동 삭제, 성공 시 본문 없이 204 No Content, 대상이 없으면 404
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){ // 바디에 담는 데이터 없다, 전달하고자 하는 값 없기 때문에 Void 선언
-        boolean isRemoved = repository.removeById(id);
-        return isRemoved ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        if (!repository.removeById(id)){ // false -> 해당 아이디를 찾지 못했다
+            throw new ActivityNotFoundException(id);
+
+        }
+        return ResponseEntity.noContent().build();
     }
 
     // valid 검사 후 부르기 때문에 @valid 또 부를 필요 없다
