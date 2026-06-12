@@ -1,10 +1,11 @@
 package com.sprintlog.sprintlogboot.controller;
 
 import com.sprintlog.sprintlogboot.domain.*;
+import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
+import com.sprintlog.sprintlogboot.dto.request.PagedResponse;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
-import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,17 +17,13 @@ import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 // 컨트롤러 자체에 공통 url 매핑하는 것이 가능
 @RestController// Response body 내장, 메서드 마다 @ResponseBody(json 변환) 일일이 붙일 필요 없게 됨
 @Slf4j
 @RequiredArgsConstructor
-@RequestMapping({"api/v1/activities","/api/activities"})
-// 컨트롤러 쪽에 공통 url 매핑, 기본적으로 "/api/activities" 으로 시작하도록 지정, 경로 두 개 설정 가능(버전 명시 앞으로 권장하는 새 버전, 이전 버전)
-// 경로 저장하는 react 화면이 깨지지 않기 위해 이전 버전, 새 버전 모두 명시하는 것이 필요하다
-// 경로를 둘로 받아 기존의 요청도 컨트롤러가 해결할 수 있도록 한다
-public class ActivityController {
+@RequestMapping("/api/v2/activities")
+public class ActivityV2Controller {
 // if) repository, dashboard가 없었다면 직접 작성해야 했을 것`
     private final ActivityRepository repository;
     // ActivityController는 ActivityRepository에게 의존
@@ -49,7 +46,7 @@ public class ActivityController {
 
     // 모든 활동 목록(페이징)
     @GetMapping // 요청 들어오면 get 메서드 세팅해줄 것
-    public ResponseEntity<List<LearningActivity>> getAll(
+    public ResponseEntity<PagedResponse<LearningActivity>> getAll(
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
@@ -70,7 +67,12 @@ public class ActivityController {
                 .limit(size)
                 .toList();
 
-        return ResponseEntity.ok().body(list); // 바로 list로 리턴되지 않고 ResponseEntity로 감쌌다 생각
+        // 내부 로직 자체는 이전 버전과 동일하지만 리턴문이 달라진다 entity를 그대로 화면에 리턴하지 않는다
+        // v1과의 차이, learningactivity 자체를 내려보내지 않고 데이터에 더해 page/size/전체 갯수를 함께 내려준다
+        PagedResponse<LearningActivity> resDto = new PagedResponse<>(list, page, size, list.size());
+        return ResponseEntity.ok().body(resDto); // 바로 list로 리턴되지 않고 ResponseEntity로 감쌌다 생각
+
+
     }
 
     @GetMapping("/{id}") // "id" <- 1,2,3,4 요청을 보내는 쪽에서 보내는 데이터
@@ -98,7 +100,6 @@ public class ActivityController {
     public ResponseEntity<List<LearningActivity>> searchByTag(@RequestParam String tag, // 변수명이 쿼리파라미터 이름과 동일하기 때문에 () 생략 가능
                                                               @RequestParam("name") String name,
                                                               @RequestParam("age") int age){
-        // Required false 없다면 필수값이라는 것
         // 대부분 () 생략할 수 있기 때문에 맞춰주는 편
         // 쿼리 파라미터로 보내자
         // 요청과 함께 전달하고자 하는 파라미터: 쿼리파라미터
@@ -106,12 +107,7 @@ public class ActivityController {
         log.info("RequestParam을 통해 얻어낸 값: {}, {}, {}", tag, name, age);
 
         List<LearningActivity> list = dashboard.filterByTag(tag);
-        return ResponseEntity.ok()
-                .header("Deprecation", "true") // 곧 없어질 엔드 포인트
-                .header("Sunset", "Thu, 31 Dec 2026 23:59:59 GMT") // 이때까지만 유효하다
-                .header("Link", // 대체를 할 수 있는 url은 headerValues
-                        "<https://docs.sprintlog.example/guides/migration#search>; rel=\"deprecation\"")
-                .body(list);
+        return ResponseEntity.ok().body(list);
     }
 
     // -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
