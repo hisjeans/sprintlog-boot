@@ -124,7 +124,7 @@ public class ActivityController {
     // 활동 수정, 자원 식별은 Path(/{id}) - 수정할 때는 어떤 객체를 변경할 것인지 지목해줘야 하기 때문
     // 변경할 내용은 본문 (UpdatedActivityRequest)
     // 대상이 없으면 404, 있으면 제목, 공개여부 변경하고 200
-    @PatchMapping("/{id}")
+    @PutMapping("/{id}") // 빌드 수정 어렵기 때문에 바꾼다, 원래는 patchmapping이 어울리기는 하나 이미 빌드 완료된 프론트가 수정 요청을 보낼 때 putmapping 했기 때문에 바꾼 것
     public ResponseEntity<LearningActivity> update(@PathVariable Long id,
                                                            @Valid @RequestBody UpdateActivityRequest request){
         LearningActivity activity = repository.findFirst(a -> a.getId() == id)
