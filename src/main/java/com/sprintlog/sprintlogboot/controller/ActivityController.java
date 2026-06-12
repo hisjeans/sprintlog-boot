@@ -6,9 +6,18 @@ import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +35,7 @@ import java.util.Optional;
 // 컨트롤러 쪽에 공통 url 매핑, 기본적으로 "/api/activities" 으로 시작하도록 지정, 경로 두 개 설정 가능(버전 명시 앞으로 권장하는 새 버전, 이전 버전)
 // 경로 저장하는 react 화면이 깨지지 않기 위해 이전 버전, 새 버전 모두 명시하는 것이 필요하다
 // 경로를 둘로 받아 기존의 요청도 컨트롤러가 해결할 수 있도록 한다
+@Tag(name = "활동(Activity)", description = "학습 활동 조회, 생성, 수정, 삭제 API") // 자세한 설명 추가
 public class ActivityController {
 // if) repository, dashboard가 없었다면 직접 작성해야 했을 것`
     private final ActivityRepository repository;
@@ -49,9 +59,16 @@ public class ActivityController {
 
     // 모든 활동 목록(페이징)
     @GetMapping // 요청 들어오면 get 메서드 세팅해줄 것
+    @Operation(summary = "활동 목록 조회",
+    description = "정렬(sort), 페이지(page), 크기(size) 쿼리파라미터로 활동 목록을 가볍게(요약) 반환한다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공(요약 목록)")
     public ResponseEntity<List<LearningActivity>> getAll(
+            @Parameter(description = "정렬 기준", example = "id",
+                schema = @Schema(allowableValues = {"id", "minutes", "title"}))
             @RequestParam(defaultValue = "id") String sort,
+            @Parameter(description = "페이지 번호(0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "한 화면에 보여질 데이터 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ){
         // 게시판에 처음 들어왔을 때 데이터 전달되지 않을 가능성 크기 때문에 기본 값 설정
@@ -73,8 +90,35 @@ public class ActivityController {
         return ResponseEntity.ok().body(list); // 바로 list로 리턴되지 않고 ResponseEntity로 감쌌다 생각
     }
 
+    @Operation(summary = "활동 단건 조회",
+        description = "id로 활동 하나를 상세하게 반환한다. 없으면 404(ProblemDetail)")
+    // 단건 조회는 응답 형태 2가지 정상/비정상 -> 배열 형태로 표시
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "해당 id의 활동이 없음",
+                    content = @Content(
+                            mediaType = "application/json", // 404에러가 발생했을 때 json 응답
+                            schema=@Schema(implementation = ProblemDetail.class),
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                            "type":
+                                            "about:blank",
+                                            "title": "활동을 찾을 수 없음",
+                                            "status": 404,
+                                            "detail": "활동을 찾을 수 없습니다. id=xxx",
+                                            "instance": "/api/activities/xxx",
+                                            "timestamp": "2026-06-12T01:38:25.989279Z"
+                                            }
+                                            """
+                            )
+                    ))
+    })
     @GetMapping("/{id}") // "id" <- 1,2,3,4 요청을 보내는 쪽에서 보내는 데이터
-    public ResponseEntity<LearningActivity> getById(@PathVariable Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
+    public ResponseEntity<LearningActivity> getById(
+        @Parameter(description = "활동 식별자", example = "1") @PathVariable Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
         LearningActivity activity = repository.findFirst(a -> a.getId() == id)
                 .orElseThrow(() -> new ActivityNotFoundException(id));
         return ResponseEntity.ok().body(activity);
