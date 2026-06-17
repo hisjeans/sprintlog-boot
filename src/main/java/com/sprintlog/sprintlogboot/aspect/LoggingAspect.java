@@ -1,7 +1,9 @@
 package com.sprintlog.sprintlogboot.aspect;
 
 import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
@@ -65,7 +67,16 @@ public class LoggingAspect {
         log.info("요청 완료: {} ({}ms)", method, end-start);
 
         return result; // 원본 메서드가 반환하는 값을 그대로 클라이언트에게 리턴
+
    }
+
+    // throwing = "ex" : 메서드가 던진 예외를 ex 파라미터로 받는다. (예외가 발생할 때만 실행됨)
+    @AfterThrowing(pointcut = "controllerLayer()", throwing = "ex")
+    public void afterServiceThrows(JoinPoint joinPoint, Throwable ex) {
+        log.warn("[@AfterThrowing] {} 예외 발생: {}",
+                joinPoint.getSignature().toShortString(), ex.getMessage());
+    } // 나중에 수정할 것
+
 
     // @Before: 원본 메서드가 실행되기 직전까지만 실행된다
     // joinPoint.proceed()를 다로 호출하지 않는다
