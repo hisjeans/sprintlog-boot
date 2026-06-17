@@ -36,39 +36,19 @@ import java.util.Optional;
 // 경로 저장하는 react 화면이 깨지지 않기 위해 이전 버전, 새 버전 모두 명시하는 것이 필요하다
 // 경로를 둘로 받아 기존의 요청도 컨트롤러가 해결할 수 있도록 한다
 @Tag(name = "활동(Activity)", description = "학습 활동 조회, 생성, 수정, 삭제 API") // 자세한 설명 추가
-public class ActivityController {
+public class ActivityController implements ActivityControllerDocs {
 // if) repository, dashboard가 없었다면 직접 작성해야 했을 것`
     private final ActivityRepository repository;
     // ActivityController는 ActivityRepository에게 의존
     // 저장된 정보 불러와 리턴해야 하기 때문
     private final ActivityDashboard dashboard; // 의존성 관계 추가
 
-    // @ResponseBody 이 메서드가 리턴하는 문자값이 json이라는 파일 형태로 직접 던져줌
-    // 요청에 대한 데이터만 운반할 것
-    // 메서드 마다 붙일 필요 없이 @RestController 이용하자
-    // /hello 란 요청이 get 메서드 받았을 때
-    @GetMapping("/hello")
-    public String hello(){
-        log.info("ActivityController.hello() 호출!");
-        return "home";
-        // 사용자 요청 -> Dispatcher Servlet이 먼저 받음
-        // -> Handler Adaptor, Handler Mapping이 컨테이너에서 bean, 메서드 찾음
-        // -> controller에게 요청 넘김
-    }
-
 
     // 모든 활동 목록(페이징)
     @GetMapping // 요청 들어오면 get 메서드 세팅해줄 것
-    @Operation(summary = "활동 목록 조회",
-    description = "정렬(sort), 페이지(page), 크기(size) 쿼리파라미터로 활동 목록을 가볍게(요약) 반환한다.")
-    @ApiResponse(responseCode = "200", description = "조회 성공(요약 목록)")
     public ResponseEntity<List<LearningActivity>> getAll(
-            @Parameter(description = "정렬 기준", example = "id",
-                schema = @Schema(allowableValues = {"id", "minutes", "title"}))
             @RequestParam(defaultValue = "id") String sort,
-            @Parameter(description = "페이지 번호(0부터 시작)", example = "0")
             @RequestParam(defaultValue = "0") int page,
-            @Parameter(description = "한 화면에 보여질 데이터 크기", example = "20")
             @RequestParam(defaultValue = "20") int size
     ){
         // 게시판에 처음 들어왔을 때 데이터 전달되지 않을 가능성 크기 때문에 기본 값 설정

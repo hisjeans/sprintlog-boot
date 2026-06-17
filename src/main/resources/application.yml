@@ -13,6 +13,17 @@ spring:
 server:
   port: 8080
 
+springdoc:
+  swagger-ui:
+    path: /api-docs-ui.html # UI page 경로
+    tags-sorter: alpha # 태그 정렬 방식 (알파벳순)
+    operations-sorter: method # 메서드 정렬 방식
+    display-request-duration: true # 요청과 응답에 소요된 시간 표시 - default: false
+    doc-expansion: list # 문서 펼침 상태 (none, list, full) - full은 모든 것 표시
+
+  api-docs:
+    path: /my-api #Swagger가 우리 API의 정보를 얻어오기 위해 요청하는 url
+
 sprintlog:
   welcome-message: "SprintLog Boot - 외부 설정 시연(기본)"
   sample-data:
