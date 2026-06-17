@@ -2,6 +2,7 @@ package com.sprintlog.sprintlogboot.controller;
 
 import com.sprintlog.sprintlogboot.domain.*;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
+import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
 import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +27,8 @@ import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 // 컨트롤러 자체에 공통 url 매핑하는 것이 가능
 @RestController// Response body 내장, 메서드 마다 @ResponseBody(json 변환) 일일이 붙일 필요 없게 됨
@@ -46,7 +49,7 @@ public class ActivityController implements ActivityControllerDocs {
 
     // 모든 활동 목록(페이징)
     @GetMapping // 요청 들어오면 get 메서드 세팅해줄 것
-    public ResponseEntity<List<LearningActivity>> getAll(
+    public ResponseEntity<List<EntityModel<ActivityResponse>>> getAll(
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
@@ -61,10 +64,11 @@ public class ActivityController implements ActivityControllerDocs {
         // 자바 이해하지 못할 수 있기 때문에 리스트를 json으로 변환해줘야 함
         // => @ResponseBody 리턴하고자하는 리스트를 json으로 변환해 리턴해주는 역할
 
-        List<LearningActivity> list = repository.findAll().stream()
+        List<EntityModel<ActivityResponse>> list = repository.findAll().stream()
                 .sorted(comparator)
                 .skip(page*size) // 0페이지면 0개 건너뛰고 size개(첫번째 페이지는 스킵하지 않는다), 1페이지면 size개 건너뛰고 size개
                 .limit(size)
+                .map(this::toModel)
                 .toList();
 
         return ResponseEntity.ok().body(list); // 바로 list로 리턴되지 않고 ResponseEntity로 감쌌다 생각
@@ -97,11 +101,12 @@ public class ActivityController implements ActivityControllerDocs {
                     ))
     })
     @GetMapping("/{id}") // "id" <- 1,2,3,4 요청을 보내는 쪽에서 보내는 데이터
-    public ResponseEntity<LearningActivity> getById(
+    public ResponseEntity<EntityModel<ActivityResponse>> getById(
         @Parameter(description = "활동 식별자", example = "1") @PathVariable Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
         LearningActivity activity = repository.findFirst(a -> a.getId() == id)
                 .orElseThrow(() -> new ActivityNotFoundException(id));
-        return ResponseEntity.ok().body(activity);
+//        return ResponseEntity.ok().body(activity); entity 그대로 return하면 안 된다 - 공개하기 민감한 정보 들어있을 수 있기 때문
+        return ResponseEntity.ok().body(toModel(activity));
     }
 
     // 카테고리별로 그룹화된 활동 목록
@@ -141,7 +146,7 @@ public class ActivityController implements ActivityControllerDocs {
     // -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
 
     @PostMapping // 요청 post
-    public ResponseEntity<LearningActivity> create(@Valid @RequestBody CreateActivityRequest request){ // @Valid 없으면 CreateActivityController 안에 있는 유효성 검증 동작하지 않는다
+    public ResponseEntity<EntityModel<ActivityResponse>> create(@Valid @RequestBody CreateActivityRequest request){ // @Valid 없으면 CreateActivityController 안에 있는 유효성 검증 동작하지 않는다
         // client는 react로 이루어져 있어 그대로 전달하지 않고 JSON 형태로 전달, createActivityRequest 형태 전달하고 싶은데 변환할 수 있을까
         // Java->Json @ResponseBody
         // JSON->Java @RequestBody
@@ -151,15 +156,15 @@ public class ActivityController implements ActivityControllerDocs {
 
         // 성공 시 201 Created + Location 헤더(생성된 자원의 주소)를 함께 응답
         URI location = URI.create("/api/activities" + activity.getId());
-        return ResponseEntity.created(location).body(activity);
+        return ResponseEntity.created(location).body(toModel(activity));
     }
 
     // 활동 수정, 자원 식별은 Path(/{id}) - 수정할 때는 어떤 객체를 변경할 것인지 지목해줘야 하기 때문
     // 변경할 내용은 본문 (UpdatedActivityRequest)
     // 대상이 없으면 404, 있으면 제목, 공개여부 변경하고 200
     @PutMapping("/{id}") // 빌드 수정 어렵기 때문에 바꾼다, 원래는 patchmapping이 어울리기는 하나 이미 빌드 완료된 프론트가 수정 요청을 보낼 때 putmapping 했기 때문에 바꾼 것
-    public ResponseEntity<LearningActivity> update(@PathVariable Long id,
-                                                           @Valid @RequestBody UpdateActivityRequest request){
+    public ResponseEntity<EntityModel<ActivityResponse>> update(@PathVariable Long id,
+                                                                @Valid @RequestBody UpdateActivityRequest request){
         LearningActivity activity = repository.findFirst(a -> a.getId() == id)
                 .orElseThrow(() -> new ActivityNotFoundException(id));
 
@@ -170,7 +175,7 @@ public class ActivityController implements ActivityControllerDocs {
             activity.hideFromPublic();
         }
         repository.update(activity);
-        return ResponseEntity.ok().body(activity);
+        return ResponseEntity.ok().body(toModel(activity));
 
     }
 
@@ -182,6 +187,20 @@ public class ActivityController implements ActivityControllerDocs {
 
         }
         return ResponseEntity.noContent().build();
+    }
+
+    // --- 응답 DTO + HATEOAS 링크 만들기 -------------------------------------------------------------------
+    private EntityModel<ActivityResponse> toModel(LearningActivity activity){
+        // 활동 객체 하나를 응답 DTO + 링크 변환
+        long id = activity.getId();
+        return EntityModel.of(
+                ActivityResponse.from(activity),
+                linkTo(methodOn(ActivityController.class).getById(id)).withSelfRel(),
+                // HATEOAS에서 제공하는 linkTo 메서드
+                // 이 데이터에 상세 정보를 보고 싶다면 getById를 호출해야 하는데 이 메서드를 호출할 수 있는 자신을 참조할 수 있는 링크를 붙여주겠다
+                linkTo(ActivityController.class).withRel("activities"), // ActivityController에 activities 요청을 보내면
+                linkTo(methodOn(ActivityTagController.class).getTags(id)).withRel("tags") // AcitivityTagController 클래스에 있는 getTags를 "tags" 이름
+        );
     }
 
     // valid 검사 후 부르기 때문에 @valid 또 부를 필요 없다

@@ -3,7 +3,7 @@ package com.sprintlog.sprintlogboot.controller;
 import com.sprintlog.sprintlogboot.domain.*;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
-import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
+import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,12 +14,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.URI;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +31,7 @@ public interface ActivityControllerDocs {
     @Operation(summary = "활동 목록 조회",
             description = "정렬(sort), 페이지(page), 크기(size) 쿼리파라미터로 활동 목록을 가볍게(요약) 반환한다.")
     @ApiResponse(responseCode = "200", description = "조회 성공(요약 목록)")
-    public ResponseEntity<List<LearningActivity>> getAll(
+    public ResponseEntity<List<EntityModel<ActivityResponse>>> getAll(
             @Parameter(description = "정렬 기준", example = "id",
                     schema = @Schema(allowableValues = {"id", "minutes", "title"}))
             @RequestParam(defaultValue = "id") String sort,
@@ -69,7 +68,7 @@ public interface ActivityControllerDocs {
                     ))
     })
     @GetMapping("/{id}") // "id" <- 1,2,3,4 요청을 보내는 쪽에서 보내는 데이터
-    public ResponseEntity<LearningActivity> getById(
+    public ResponseEntity<EntityModel<ActivityResponse>> getById(
             @Parameter(description = "활동 식별자", example = "1") @PathVariable Long id);
 
     // 카테고리별로 그룹화된 활동 목록
@@ -90,15 +89,15 @@ public interface ActivityControllerDocs {
     // -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
 
     @PostMapping // 요청 post
-    public ResponseEntity<LearningActivity> create(@Valid @RequestBody CreateActivityRequest request);
+    public ResponseEntity<EntityModel<ActivityResponse>> create(@Valid @RequestBody CreateActivityRequest request);
 
 
     // 활동 수정, 자원 식별은 Path(/{id}) - 수정할 때는 어떤 객체를 변경할 것인지 지목해줘야 하기 때문
     // 변경할 내용은 본문 (UpdatedActivityRequest)
     // 대상이 없으면 404, 있으면 제목, 공개여부 변경하고 200
     @PutMapping("/{id}") // 빌드 수정 어렵기 때문에 바꾼다, 원래는 patchmapping이 어울리기는 하나 이미 빌드 완료된 프론트가 수정 요청을 보낼 때 putmapping 했기 때문에 바꾼 것
-    public ResponseEntity<LearningActivity> update(@PathVariable Long id,
-                                                   @Valid @RequestBody UpdateActivityRequest request);
+    public ResponseEntity<EntityModel<ActivityResponse>> update(@PathVariable Long id,
+                                                                @Valid @RequestBody UpdateActivityRequest request);
 
     // 활동 삭제, 성공 시 본문 없이 204 No Content, 대상이 없으면 404
     @DeleteMapping("/{id}")
