@@ -1,6 +1,7 @@
 package com.sprintlog.sprintlogboot.service;
 
 
+import com.sprintlog.sprintlogboot.aspect.LogExecutionTime;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
@@ -43,6 +44,7 @@ public class ActivityDashboard {
      */
 
     //메서드 안에서도 클래스 선언 가능
+    @LogExecutionTime // summarize 호출되기 전 start 시간 찍히고 summarize 호출된 후 end 시간이 찍힐 것
     public Summary summarize(){
         //로컬 클래스 선언: 메소드 안에서 클래스 선언, summarize()밖에서는 사용할 수 없음
         class Counter { //summarize 메소드를 호출해야만 counter 클래스 사용 가능

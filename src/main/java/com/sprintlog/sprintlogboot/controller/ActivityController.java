@@ -1,5 +1,6 @@
 package com.sprintlog.sprintlogboot.controller;
 
+import com.sprintlog.sprintlogboot.aspect.LogExecutionTime;
 import com.sprintlog.sprintlogboot.domain.*;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
@@ -101,6 +102,7 @@ public class ActivityController implements ActivityControllerDocs {
                     ))
     })
     @GetMapping("/{id}") // "id" <- 1,2,3,4 요청을 보내는 쪽에서 보내는 데이터
+    @LogExecutionTime // 의미없다, LoggingAspect 클래스에서 ActivityController를 이미 처리하고 있기 때문
     public ResponseEntity<EntityModel<ActivityResponse>> getById(
         @Parameter(description = "활동 식별자", example = "1") @PathVariable Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
         LearningActivity activity = repository.findFirst(a -> a.getId() == id)
