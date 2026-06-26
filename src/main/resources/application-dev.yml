@@ -1,6 +1,26 @@
 # 프로필이 dev일 때만 동작하는 yml 파일
 # 개발 환경 (dev profile) 추가 설정
 # application.yml 의 값들을 덮어쓰거나 보강
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sprintlog
+    username: sprintlog
+    password: sprintlog
+    driver-class-name: org.postgresql.Driver
+    # 실제 이 데이터베이스 어떤 드라이버 클래스로 접근
+    # 필수, 없으면 접근 자체 불가능
+  jpa:
+    hibernate:
+      # 엔티티 클래스를 보고 CREATE, ALTER 자동으로 만들어 DB에 적용
+      ddl-auto: create # create 로 설정하면 기존에 테이블 있다고 해도 지워지고 새롭게 생성, update는 기존 테이블 지워지지 않는다, 개발 과정에서 더 편하다
+    show-sql: true # 실행되는 SQL을 콘솔에 보여준다
+    properties:
+      hibernate:
+        format_sql: true # SQL을 보기 좋게 들여쓰기
+  # 내가 클래스문 작성하지 않아도 create문 보고 자동으로 작성해준다
+  # 실행하는 SQL 보여달라 요청
+
 sprintlog:
   welcome-message: "SprintLog Boot - DEV 환경 (개발자 모드)"
   sample-data:
@@ -11,3 +31,6 @@ sprintlog:
 logging:
   level:
     com.sprintlog: debug
+    # hibernate가 실제로 완성하는 SQL과 ? 자리에 채워지는 바인딩 값을 함께 보기 위함
+    org.hibernate.sql: debug
+    org.hibernate.orm.jdbc.bind: trace

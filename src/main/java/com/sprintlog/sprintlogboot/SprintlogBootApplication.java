@@ -3,7 +3,11 @@ package com.sprintlog.sprintlogboot;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
+// BaseEntity의 @CreateDate/@LastModifiedDate 자동 채움 기능을 켠다
+// 이게 없으면 둘 다 null로 들어가게 된다
+@EnableJpaAuditing
 @SpringBootApplication
 public class SprintlogBootApplication {
 
