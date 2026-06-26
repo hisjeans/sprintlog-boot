@@ -4,8 +4,10 @@ import com.sprintlog.sprintlogboot.config.SprintLogProperties;
 import com.sprintlog.sprintlogboot.domain.LectureLog;
 import com.sprintlog.sprintlogboot.domain.PracticeLog;
 import com.sprintlog.sprintlogboot.domain.ReadingLog;
+import com.sprintlog.sprintlogboot.domain.User;
 import com.sprintlog.sprintlogboot.domain.Visibility;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
+import com.sprintlog.sprintlogboot.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,8 @@ public class DataInitializer {
 
     private final ActivityRepository repository;
     private final SprintLogProperties properties;
-
+    // 우리가 직접 UserRepository 빈 등록은 하지 않았지만, Spring Data JPA가 이미 구현체를 빈으로 등록해 놓았다
+    private final UserRepository userRepository;
 
     // 생성자 삭제 - 로직 자체가 전달받아 필드에 세팅하는 것밖에 없기 때문에 lombok으로 대체 가능
 
@@ -49,6 +52,17 @@ public class DataInitializer {
 
         log.info("[lifecycle] 샘플 데이터 적재 완료 — 총 {}개", repository.count());
 
+        if (userRepository.count()==0){ // Select Count(*) from users
+            User sion = new User("오시온", "sion@icloud.com");
+            userRepository.save(sion);
+            // 직접 생성한 엔티티가 상속관계까지 있다면 포함, 생성할 때 선언했던 user 타입
+            // 저장된 객체 리턴 가능
+            User saved = userRepository.save(new User("구정모", "jungmo@gmail.com"));
+            log.info("[lifecycle] User 저장 완료 - saved id={}, createdAt={}"
+                , saved.getId(), saved.getCreatedAt());
+        }
+
+        log.info("[lifecycle] DB 사용자 수: {}명", userRepository.count());
     }
 
     // 객체 소멸하기 전에 자동으로 호출

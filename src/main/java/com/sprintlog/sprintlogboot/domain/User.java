@@ -25,6 +25,15 @@ public class User extends BaseEntity {
   private String email;
 
   // user, learningActivity, member, book, loan, author..는 pk->id, createdAt, updatedAt 공통적으로 가질 가능성 높다
-  //
+
+  // JPA가 엔티티를 만들 때 사용하는 기본 생성자, 우리가 호출하는 게 아니다
+  // 없으면 JPA가 user 객체 생성할 수 없다
+  protected User() {}
+
+  // 우리가 실제로 사용하는 생성자
+  public User(String nickName, String email) {
+    this.nickName = nickName;
+    this.email = email;
+  }
 
 }
