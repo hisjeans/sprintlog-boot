@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
 
 // Swagger 전용 인터페이스를 하나 선언해 비즈니스 로직과 문서화 로직 분리
 // 기존 컨트롤러는 본연의 역할에 집중
@@ -89,7 +90,9 @@ public interface ActivityControllerDocs {
     // -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
 
     @PostMapping // 요청 post
-    public ResponseEntity<EntityModel<ActivityResponse>> create(@Valid @RequestBody CreateActivityRequest request);
+    public ResponseEntity<EntityModel<ActivityResponse>> create(
+        @Valid @RequestPart("data") CreateActivityRequest request,
+        @RequestPart(value = "file", required = false) MultipartFile file);
 
 
     // 활동 수정, 자원 식별은 Path(/{id}) - 수정할 때는 어떤 객체를 변경할 것인지 지목해줘야 하기 때문

@@ -8,6 +8,7 @@ import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
+import com.sprintlog.sprintlogboot.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -28,6 +29,7 @@ import java.net.URI;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
@@ -46,6 +48,7 @@ public class ActivityController implements ActivityControllerDocs {
     // ActivityController는 ActivityRepository에게 의존
     // 저장된 정보 불러와 리턴해야 하기 때문
     private final ActivityDashboard dashboard; // 의존성 관계 추가
+    private final FileService fileService;
 
 
     // 모든 활동 목록(페이징)
@@ -148,12 +151,23 @@ public class ActivityController implements ActivityControllerDocs {
     // -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
 
     @PostMapping // 요청 post
-    public ResponseEntity<EntityModel<ActivityResponse>> create(@Valid @RequestBody CreateActivityRequest request){ // @Valid 없으면 CreateActivityController 안에 있는 유효성 검증 동작하지 않는다
+    public ResponseEntity<EntityModel<ActivityResponse>> create(
+        @Valid @RequestPart("data") CreateActivityRequest request,
+        @RequestPart(value = "file", required = false) MultipartFile file
+    ){ // @Valid 없으면 CreateActivityController 안에 있는 유효성 검증 동작하지 않는다
         // client는 react로 이루어져 있어 그대로 전달하지 않고 JSON 형태로 전달, createActivityRequest 형태 전달하고 싶은데 변환할 수 있을까
         // Java->Json @ResponseBody
-        // JSON->Java @RequestBody
+        // JSON->Java @RequestBody - 이제는 파일도 넘어온다 => @RequestPart
         // 요청 본문에 들어있는 JSON을 자바로 변환
         LearningActivity activity=toActivity(request); // LearningActivity 타입 전달될 수 있는 이유, ActivityRepository에서 LearningActivity 타입(엔티티 타입)을 알려줬기 때문
+
+        if(file!=null&&!file.isEmpty()){
+            String savedFileName = fileService.saveFile(file);
+            activity.attachFile(savedFileName);
+        } // 데이터베이스에는 파일명 저장
+
+
+
         LearningActivity saved = repository.save(activity);// 실제로 저장이 완료되는 객체 리턴 가능
 
         // 성공 시 201 Created + Location 헤더(생성된 자원의 주소)를 함께 응답
