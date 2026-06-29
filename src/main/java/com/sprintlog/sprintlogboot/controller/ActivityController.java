@@ -56,7 +56,8 @@ public class ActivityController implements ActivityControllerDocs {
     public ResponseEntity<List<EntityModel<ActivityResponse>>> getAll(
             @RequestParam(defaultValue = "id") String sort,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long ownerId
     ){
         // 게시판에 처음 들어왔을 때 데이터 전달되지 않을 가능성 크기 때문에 기본 값 설정
 
@@ -68,7 +69,11 @@ public class ActivityController implements ActivityControllerDocs {
         // 자바 이해하지 못할 수 있기 때문에 리스트를 json으로 변환해줘야 함
         // => @ResponseBody 리턴하고자하는 리스트를 json으로 변환해 리턴해주는 역할
 
-        List<EntityModel<ActivityResponse>> list = repository.findAll().stream() // JPA에서 findAll 이란 메서드가 기본적으로 제공
+        // 만일 요청을 보낼 때 ownerId가 전달된다면 ownerId를 가진 user 활동만 조회
+        List<LearningActivity> source
+            = (ownerId != null) ? repository.findByOwnerId(ownerId) : repository.findAll();// JPA의 쿼리 메서드
+
+        List<EntityModel<ActivityResponse>> list = source.stream()
                 .sorted(comparator)
                 .skip(page*size) // 0페이지면 0개 건너뛰고 size개(첫번째 페이지는 스킵하지 않는다), 1페이지면 size개 건너뛰고 size개
                 .limit(size)

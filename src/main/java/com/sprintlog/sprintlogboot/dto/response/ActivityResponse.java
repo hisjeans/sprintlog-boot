@@ -17,7 +17,11 @@ public record ActivityResponse( // ActivityResponse 객체가 Response로 화면
         // 하위 타입별 상세 — 해당 타입일 때만 채워지고, 나머지는 null 이라 JSON 에서 생략된다.
         String instructorName,       // LECTURE 전용
         Integer completionRate,      // PRACTICE 전용
-        String bookTitle             // READING 전용
+        String bookTitle,             // READING 전용
+
+        // 연관관계 세팅 후 활동 객체 조회 시 활동을 추가한 user의 정보도 함께 응답
+        Long ownerId,
+        String ownerNickName
 ) {
 
     /**
@@ -26,6 +30,11 @@ public record ActivityResponse( // ActivityResponse 객체가 Response로 화면
      * null 값이라면 알아서 JSON에서 생략
      */
     public static ActivityResponse from(LearningActivity activity) { // 정적 팩토리 메서드
+        User owner = activity.getOwner();
+        // 활동 객체가 없는 null 인 것도 처리 필요
+        Long ownerId = (owner != null)? owner.getId() : null;
+        String ownerNickName = (owner != null) ? owner.getNickName() : null;
+
         return new ActivityResponse(
                 activity.getId(),
                 activity.getCategory(),
@@ -35,6 +44,8 @@ public record ActivityResponse( // ActivityResponse 객체가 Response로 화면
                 activity.getTags(),
                 activity.getInstructorName(),
                 activity.getCompletionRate(),
-                activity.getBookTitle());
+                activity.getBookTitle(),
+                ownerId,
+                ownerNickName);
     }
 }
