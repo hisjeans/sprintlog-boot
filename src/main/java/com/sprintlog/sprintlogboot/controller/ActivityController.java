@@ -5,8 +5,8 @@ import com.sprintlog.sprintlogboot.domain.*;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
 import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
-import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
+import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -42,7 +42,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 @Tag(name = "활동(Activity)", description = "학습 활동 조회, 생성, 수정, 삭제 API") // 자세한 설명 추가
 public class ActivityController implements ActivityControllerDocs {
 // if) repository, dashboard가 없었다면 직접 작성해야 했을 것`
-    private final ActivityRepository repository;
+    private final ActivityRepository repository; // 인터페이스로 바뀌었다
     // ActivityController는 ActivityRepository에게 의존
     // 저장된 정보 불러와 리턴해야 하기 때문
     private final ActivityDashboard dashboard; // 의존성 관계 추가
@@ -65,7 +65,7 @@ public class ActivityController implements ActivityControllerDocs {
         // 자바 이해하지 못할 수 있기 때문에 리스트를 json으로 변환해줘야 함
         // => @ResponseBody 리턴하고자하는 리스트를 json으로 변환해 리턴해주는 역할
 
-        List<EntityModel<ActivityResponse>> list = repository.findAll().stream()
+        List<EntityModel<ActivityResponse>> list = repository.findAll().stream() // JPA에서 findAll 이란 메서드가 기본적으로 제공
                 .sorted(comparator)
                 .skip(page*size) // 0페이지면 0개 건너뛰고 size개(첫번째 페이지는 스킵하지 않는다), 1페이지면 size개 건너뛰고 size개
                 .limit(size)
@@ -105,7 +105,7 @@ public class ActivityController implements ActivityControllerDocs {
     @LogExecutionTime // 의미없다, LoggingAspect 클래스에서 ActivityController를 이미 처리하고 있기 때문
     public ResponseEntity<EntityModel<ActivityResponse>> getById(
         @Parameter(description = "활동 식별자", example = "1") @PathVariable Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
-        LearningActivity activity = repository.findFirst(a -> a.getId() == id)
+        LearningActivity activity = repository.findById(id) // findFirst라는 직접 작성했던 메서드 보다 훨씬 간단해진 것 확인 가능, 기본 타입 optional로 주기 때문에 orElseThrow 그대로 사용 가능, select * from activities where id=?
                 .orElseThrow(() -> new ActivityNotFoundException(id));
 //        return ResponseEntity.ok().body(activity); entity 그대로 return하면 안 된다 - 공개하기 민감한 정보 들어있을 수 있기 때문
         return ResponseEntity.ok().body(toModel(activity));
@@ -153,11 +153,11 @@ public class ActivityController implements ActivityControllerDocs {
         // Java->Json @ResponseBody
         // JSON->Java @RequestBody
         // 요청 본문에 들어있는 JSON을 자바로 변환
-        LearningActivity activity=toActivity(request);
-        repository.add(activity); // 원래는 서비스가 담당
+        LearningActivity activity=toActivity(request); // LearningActivity 타입 전달될 수 있는 이유, ActivityRepository에서 LearningActivity 타입(엔티티 타입)을 알려줬기 때문
+        LearningActivity saved = repository.save(activity);// 실제로 저장이 완료되는 객체 리턴 가능
 
         // 성공 시 201 Created + Location 헤더(생성된 자원의 주소)를 함께 응답
-        URI location = URI.create("/api/activities" + activity.getId());
+        URI location = URI.create("/api/activities" + saved.getId()); // 기존과 달리 데이터가 insert될 때, 자동으로 아이디 세팅되기 때문에 변경
         return ResponseEntity.created(location).body(toModel(activity));
     }
 
@@ -167,7 +167,7 @@ public class ActivityController implements ActivityControllerDocs {
     @PutMapping("/{id}") // 빌드 수정 어렵기 때문에 바꾼다, 원래는 patchmapping이 어울리기는 하나 이미 빌드 완료된 프론트가 수정 요청을 보낼 때 putmapping 했기 때문에 바꾼 것
     public ResponseEntity<EntityModel<ActivityResponse>> update(@PathVariable Long id,
                                                                 @Valid @RequestBody UpdateActivityRequest request){
-        LearningActivity activity = repository.findFirst(a -> a.getId() == id)
+        LearningActivity activity = repository.findById(id)
                 .orElseThrow(() -> new ActivityNotFoundException(id));
 
         activity.changTitle(request.title());
@@ -176,7 +176,10 @@ public class ActivityController implements ActivityControllerDocs {
         } else {
             activity.hideFromPublic();
         }
-        repository.update(activity);
+        // JPA가 적용된 상태에서의 update는 findById로 조회해 온 Entity를 setter로 변경
+        // 변경 후 명시적으로 save() 호출하면 영속성 컨텍스트의 변경 감지(dirty checking)에 의해 update 쿼리가 날아간다
+        // JPA는 save를 부르지 않아도 변경이 되면 알아서 update 쿼리가 나가지만 명시적으로 써주는 것을 선호
+        repository.save(activity);
         return ResponseEntity.ok().body(toModel(activity));
 
     }
@@ -184,10 +187,10 @@ public class ActivityController implements ActivityControllerDocs {
     // 활동 삭제, 성공 시 본문 없이 204 No Content, 대상이 없으면 404
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){ // 바디에 담는 데이터 없다, 전달하고자 하는 값 없기 때문에 Void 선언
-        if (!repository.removeById(id)){ // false -> 해당 아이디를 찾지 못했다
+        if (!repository.existsById(id)){ // 해당 id에 대한 데이터 존재 여부 확인(T/F)
             throw new ActivityNotFoundException(id);
-
         }
+        repository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -205,18 +208,19 @@ public class ActivityController implements ActivityControllerDocs {
         );
     }
 
-    // valid 검사 후 부르기 때문에 @valid 또 부를 필요 없다
+    // 평탄화 후 — 하위 타입 생성 switch 가 사라졌다.
+    //   종류(type)와 종류별 필드를 그대로 단일 생성자에 넘기면 된다(엔티티가 category 로 구분).
+    // switch문 삭제, 일괄적으로 LearningActivity 처리
     private LearningActivity toActivity(CreateActivityRequest request) {
-        LearningActivity activity=switch (request.type()){
-            case LECTURE -> new LectureLog(request.title(), request.minutes(), request.visibility(), request.instructorName());
-            case PRACTICE -> new PracticeLog(request.title(), request.minutes(), request.visibility(), request.completionRate());
-            case READING -> new ReadingLog(request.title(), request.minutes(), request.visibility(), request.bookTitle());
-        };
-        if (request.tags()!=null){
+        LearningActivity activity = new LearningActivity(
+            request.type(), request.title(), request.minutes(), request.visibility(),
+            request.instructorName(), request.completionRate(), request.bookTitle());
+
+        if (request.tags() != null) {
             request.tags().forEach(activity::addTag);
         }
         return activity;
-    } // 나중에 서비스 로직으로 옮길 것
+    }
 }
 // 예전 방식
 // 요즈음은 순수 html 방식 사용 적음

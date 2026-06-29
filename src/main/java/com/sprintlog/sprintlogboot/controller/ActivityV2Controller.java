@@ -77,7 +77,7 @@ public class ActivityV2Controller {
 
     @GetMapping("/{id}") // "id" <- 1,2,3,4 요청을 보내는 쪽에서 보내는 데이터
     public ResponseEntity<LearningActivity> getById(@PathVariable Long id) { // 메서드 내부에서 id 변수로 사용할 수 있도록 설정
-        LearningActivity activity = repository.findFirst(a -> a.getId() == id)
+        LearningActivity activity = repository.findById(id)
                 .orElseThrow(() -> new ActivityNotFoundException(id));
         return ResponseEntity.ok().body(activity);
     }
@@ -119,10 +119,10 @@ public class ActivityV2Controller {
         // JSON->Java @RequestBody
         // 요청 본문에 들어있는 JSON을 자바로 변환
         LearningActivity activity=toActivity(request);
-        repository.add(activity); // 원래는 서비스가 담당
+        LearningActivity saved = repository.save(activity);// 원래는 서비스가 담당
 
         // 성공 시 201 Created + Location 헤더(생성된 자원의 주소)를 함께 응답
-        URI location = URI.create("/api/activities" + activity.getId());
+        URI location = URI.create("/api/activities" + saved.getId());
         return ResponseEntity.created(location).body(activity);
     }
 
@@ -132,7 +132,7 @@ public class ActivityV2Controller {
     @PutMapping("/{id}") // 빌드 수정 어렵기 때문에 바꾼다, 원래는 patchmapping이 어울리기는 하나 이미 빌드 완료된 프론트가 수정 요청을 보낼 때 putmapping 했기 때문에 바꾼 것
     public ResponseEntity<LearningActivity> update(@PathVariable Long id,
                                                            @Valid @RequestBody UpdateActivityRequest request){
-        LearningActivity activity = repository.findFirst(a -> a.getId() == id)
+        LearningActivity activity = repository.findById(id)
                 .orElseThrow(() -> new ActivityNotFoundException(id));
 
         activity.changTitle(request.title());
@@ -141,7 +141,7 @@ public class ActivityV2Controller {
         } else {
             activity.hideFromPublic();
         }
-        repository.update(activity);
+        repository.save(activity); // JPA에서는 insert, update 모두 save로 처리
         return ResponseEntity.ok().body(activity);
 
     }
@@ -149,25 +149,25 @@ public class ActivityV2Controller {
     // 활동 삭제, 성공 시 본문 없이 204 No Content, 대상이 없으면 404
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id){ // 바디에 담는 데이터 없다, 전달하고자 하는 값 없기 때문에 Void 선언
-        if (!repository.removeById(id)){ // false -> 해당 아이디를 찾지 못했다
+        if (!repository.existsById(id)){ // false -> 해당 아이디를 찾지 못했다
             throw new ActivityNotFoundException(id);
-
         }
+        repository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 
-    // valid 검사 후 부르기 때문에 @valid 또 부를 필요 없다
+    // 평탄화 후 — 하위 타입 생성 switch 가 사라졌다.
+    //   종류(type)와 종류별 필드를 그대로 단일 생성자에 넘기면 된다(엔티티가 category 로 구분).
     private LearningActivity toActivity(CreateActivityRequest request) {
-        LearningActivity activity=switch (request.type()){
-            case LECTURE -> new LectureLog(request.title(), request.minutes(), request.visibility(), request.instructorName());
-            case PRACTICE -> new PracticeLog(request.title(), request.minutes(), request.visibility(), request.completionRate());
-            case READING -> new ReadingLog(request.title(), request.minutes(), request.visibility(), request.bookTitle());
-        };
-        if (request.tags()!=null){
+        LearningActivity activity = new LearningActivity(
+            request.type(), request.title(), request.minutes(), request.visibility(),
+            request.instructorName(), request.completionRate(), request.bookTitle());
+
+        if (request.tags() != null) {
             request.tags().forEach(activity::addTag);
         }
         return activity;
-    } // 나중에 서비스 로직으로 옮길 것
+    }
 }
 // 예전 방식
 // 요즈음은 순수 html 방식 사용 적음
