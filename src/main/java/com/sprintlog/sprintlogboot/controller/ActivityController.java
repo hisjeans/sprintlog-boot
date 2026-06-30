@@ -8,6 +8,7 @@ import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
+import com.sprintlog.sprintlogboot.service.ActivityService;
 import com.sprintlog.sprintlogboot.service.FileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -49,7 +50,7 @@ public class ActivityController implements ActivityControllerDocs {
     // 저장된 정보 불러와 리턴해야 하기 때문
     private final ActivityDashboard dashboard; // 의존성 관계 추가
     private final FileService fileService;
-
+    private final ActivityService activityService;
 
     // 모든 활동 목록(페이징)
     @GetMapping // 요청 들어오면 get 메서드 세팅해줄 것
@@ -227,6 +228,7 @@ public class ActivityController implements ActivityControllerDocs {
         );
     }
 
+    // private 클래스 안에서만 사용하는 것이므로 아래쪽에 배치하는 것이 일반적
     // 평탄화 후 — 하위 타입 생성 switch 가 사라졌다.
     //   종류(type)와 종류별 필드를 그대로 단일 생성자에 넘기면 된다(엔티티가 category 로 구분).
     // switch문 삭제, 일괄적으로 LearningActivity 처리
@@ -240,6 +242,24 @@ public class ActivityController implements ActivityControllerDocs {
         }
         return activity;
     }
+
+    @GetMapping("/find") // Restful 하지 못한 url 작성법
+    public ResponseEntity<List<ActivityResponse>> find(
+        @RequestParam(required = false) ActivityCategory category,
+        @RequestParam(required = false) String keyword,
+        @RequestParam(required = false) Integer minMinutes
+    ){
+        List<ActivityResponse> dtoList=activityService.search(category, keyword, minMinutes);
+        return ResponseEntity.ok().body(dtoList);
+    }
+
+    @DeleteMapping("/{title}/{category}")
+    public ResponseEntity<Void> deleteByTitleAndCategory(
+        @PathVariable String title,
+        @PathVariable ActivityCategory category) {
+        activityService.deleteByTitleAndCategory(title, category);
+        return ResponseEntity.noContent().build();
+        }
 }
 // 예전 방식
 // 요즈음은 순수 html 방식 사용 적음
