@@ -4,6 +4,7 @@ import com.sprintlog.sprintlogboot.domain.*;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
+import com.sprintlog.sprintlogboot.dto.response.PagedResponse;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
@@ -81,16 +82,10 @@ public interface ActivityControllerDocs {
 
     // 활동 수 요약 정보 (전체 / 강의 / 실습 / 독서)
     @Hidden // 숨길 수도 있다
-    @GetMapping("/summary")
+    @RequestMapping(value = "/summary", method = RequestMethod.POST)
     public ResponseEntity<ActivityDashboard.Summary> getSummary();
 
-    // 태그로 활동을 필터링
-    @GetMapping("/search")
-    public ResponseEntity<List<LearningActivity>> searchByTag(@RequestParam String tag, // 변수명이 쿼리파라미터 이름과 동일하기 때문에 () 생략 가능
-                                                              @RequestParam("name") String name,
-                                                              @RequestParam("age") int age);
-
-    // -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
+    // 변경 작업: -- 생성(POST) / 수정(PUT) / 삭제(DELETE) --
 
     @PostMapping // 요청 post
     public ResponseEntity<EntityModel<ActivityResponse>> create(
