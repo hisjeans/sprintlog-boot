@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,26 +53,24 @@ public class ActivityService {
         .toList();
   }
 
-  @Transactional
-  public void deleteByTitleAndCategory(String title, ActivityCategory category) {
-    repository.deleteByTitleAndCategoryWithJPQL(title, category);
-  }
+  public Page<LearningActivity> page(String sort, int page, int size, Long ownerId) {
 
-  public List<LearningActivity> list(String sort, int page, int size, Long ownerId) {
-    Comparator<LearningActivity> comparator = switch (sort) {
-      case "minutes" -> Comparator.comparingInt(LearningActivity::getMinutes);
-      case "title" -> Comparator.comparing(LearningActivity::getTitle);
-      default -> Comparator.comparing(LearningActivity::getId);
+    // 기존에는 정렬 기준을 Comparator로 지정했는데, JPA에서 제공하는 페이징 기능을 사용하기 위해
+    // Sort 타입으로 정렬 기준을 지정
+    Sort sortBy = switch (sort) {
+      case "minutes" -> Sort.by(Sort.Direction.DESC, "minutes");
+      case "title" -> Sort.by("title");
+      default -> Sort.by("id");
     };
 
-    List<LearningActivity> source
-        = (ownerId != null) ? repository.findByOwnerId(ownerId) : repository.findAll();
 
-    return source.stream()
-        .sorted(comparator)
-        .skip((long) page * size) // 0페이지면 0개 건너뛰고 size개, 1페이지면 size개 건너뛰고 size개
-        .limit(size)
-        .toList();
+    // 페이지 정보를 담을 객체 생성 (Pageable)
+    // 여기서는 페이지 번호가 zero-based임. 1페이지를 0으로 취급.
+    Pageable pageable = PageRequest.of(page - 1, size, sortBy);
+
+    return (ownerId != null)
+        ? repository.findByOwnerId(ownerId, pageable)
+        : repository.findAll(pageable);
   }
 
   public LearningActivity get(Long id) {
@@ -130,4 +129,10 @@ public class ActivityService {
     }
     repository.deleteById(id);
   }
+
+  public Slice<LearningActivity> sliceByVisibility(Visibility visibility, int page, int size) {
+    PageRequest pageable = PageRequest.of(page, size, Sort.by("id"));
+    return repository.findByVisibility(visibility, pageable);
+  }
+
 }

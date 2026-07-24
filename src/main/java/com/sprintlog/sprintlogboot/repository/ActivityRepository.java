@@ -5,6 +5,10 @@ import com.sprintlog.sprintlogboot.domain.LearningActivity;
 import com.sprintlog.sprintlogboot.domain.Visibility;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -21,7 +25,17 @@ public interface ActivityRepository extends JpaRepository<LearningActivity, Long
   // - 선언만 하면 구현체가 알아서 쿼리 구성
   List<LearningActivity> findByOwnerId(Long ownerId);
 
-//  List<LearningActivity> findByTitle(String title); // 같은 타이틀 중복 가능성 있다면 여러 개 조회될 수 있다
+  // 우리가 직접 작성한 쿼리 메서드도 페이징 처리 가능
+  // 정렬, 페이지 자르기, 전체 개수를 포함한 Page 객체를 리턴하게 하면 된다
+  Page<LearningActivity> findByOwnerId(Long ownerId, Pageable pageable);
+  // 호출할 때 구분하면 메서드 중복 가능, 오버로딩 가능
+  // 생성자 매개변수 개수, 순서, 타입 중 하나만 다르게 해도 오버로딩 허용
+  // != 오버라이딩: 메서드 재정의, 부모가 물려준 메서드가 부족하거나 맞지 않은 경우 우선 사용 - 상속
+
+  // Slice: 더보기 or 무한스크롤 페이징에서 사용하는 객체, 전체 개수 count 쿼리 없이 다음 페이지 유무만 안다 (Page 보다 가볍다)
+  Slice<LearningActivity> findByVisibility(Visibility visibility, Pageable pageable);
+
+  //  List<LearningActivity> findByTitle(String title); // 같은 타이틀 중복 가능성 있다면 여러 개 조회될 수 있다
   Optional<LearningActivity> findByTitle(String title); // 하나만 조회할 때는 entity 그대로 받으면 위험할 수 있기 때문에 optional
 
   // 종류별로 조회: WHERE category = ?

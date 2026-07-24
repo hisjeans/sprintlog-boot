@@ -5,6 +5,8 @@ import com.sprintlog.sprintlogboot.domain.*;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
+import com.sprintlog.sprintlogboot.dto.response.PagedResponse;
+import com.sprintlog.sprintlogboot.dto.response.SliceResponse;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
 import com.sprintlog.sprintlogboot.service.ActivityService;
 import com.sprintlog.sprintlogboot.service.FileService;
@@ -12,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Slice;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,21 +46,48 @@ public class ActivityController implements ActivityControllerDocs {
 
     // 모든 활동 목록(페이징)
     @GetMapping // 요청 들어오면 get 메서드 세팅해줄 것
-    public ResponseEntity<List<EntityModel<ActivityResponse>>> getAll(
+    public ResponseEntity<PagedResponse<ActivityResponse>> getAll(
             @RequestParam(defaultValue = "id") String sort,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) Long ownerId
     ){
         // 게시판에 처음 들어왔을 때 데이터 전달되지 않을 가능성 크기 때문에 기본 값 설정
 
-        List<EntityModel<ActivityResponse>> list
-            = activityService.list(sort, page, size, ownerId).stream()
-            .map(this::toModel)
+        // 기존 EntityModel을 ActivityResponse로 감싸서 전달
+        Page<LearningActivity> result
+            = activityService.page(sort, page, size, ownerId);
+
+        // 원본 리스트를 꺼낼 때는 getContent를 통해서 꺼낼 수 있다.
+        List<ActivityResponse> content = result.getContent().stream()
+            .map(ActivityResponse::from)
             .toList();
 
-        return ResponseEntity.ok().body(list);
+        // 페이지 정보들까지 함께 담을 수 있는 PagedResponse를 사용해서 응답
+        return ResponseEntity.ok().body(new PagedResponse<>(content, result.getNumber(), result.getSize(),
+            result.getTotalElements(), result.getTotalPages()));
+
     }
+
+
+    @GetMapping("/slice")
+    public ResponseEntity<SliceResponse<ActivityResponse>> slice(
+        @RequestParam(defaultValue = "PUBLIC") Visibility visibility,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size // 공개된 활동들만 받기 위해 페이징 처리
+
+    ){
+        Slice<LearningActivity> result = activityService.sliceByVisibility(visibility,
+            page, size);
+        List<ActivityResponse> content = result.getContent().stream()
+            .map(ActivityResponse::from)
+            .toList();// 원본 리스트 포장
+
+        return ResponseEntity.ok().body(new SliceResponse<>(content, result.getNumber(), result.getSize(), result.hasNext()));
+
+    }
+
+
 
     @GetMapping("/{id}")
     @LogExecutionTime

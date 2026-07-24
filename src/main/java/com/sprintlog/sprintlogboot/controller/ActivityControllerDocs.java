@@ -33,7 +33,7 @@ public interface ActivityControllerDocs {
     @Operation(summary = "활동 목록 조회",
             description = "정렬(sort), 페이지(page), 크기(size) 쿼리파라미터로 활동 목록을 가볍게(요약) 반환한다.")
     @ApiResponse(responseCode = "200", description = "조회 성공(요약 목록)")
-    public ResponseEntity<List<EntityModel<ActivityResponse>>> getAll(
+    public ResponseEntity<PagedResponse<ActivityResponse>> getAll(
             @Parameter(description = "정렬 기준", example = "id",
                     schema = @Schema(allowableValues = {"id", "minutes", "title"}))
             @RequestParam(defaultValue = "id") String sort,
