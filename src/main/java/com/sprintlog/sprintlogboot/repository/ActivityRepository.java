@@ -87,4 +87,16 @@ public interface ActivityRepository extends JpaRepository<LearningActivity, Long
   @Modifying // SELECT 아니면 무조건 붙여야 한다❕JPQL은 기본 SELECT 기반으로 동작
   @Query("DELETE FROM LearningActivity a WHERE a.title = ?1 AND a.category = ?2")
   void deleteByTitleAndCategoryWithJPQL(String title, ActivityCategory category); // 보통 삭제는 하나만 지정해 삭제하는 경우 많다 단순 연습용
+
+  // M+1 문제 해결
+  // 둘 중 하나 택해 사용
+  // 대부분은 FETCH JOIN 주로 사용
+  // 연관은 기본을 LAZY 로딩으로 두고, 정말 필요한 조회에서만 FETCH JOIN이나 EntityGraph 사용해 조인 결과를 함께 들고오는 방식 선호
+  @Query("SELECT a FROM LearningActivity a LEFT JOIN FETCH a.owner LEFT JOIN FETCH a.tags") // 활동 연관관계 - User, tag
+  List<LearningActivity> findAllFetchJoin(); // LearningActivity 조회할 때 owner, tag LEFT JOIN FETCH - N+1 방지
+
+  @EntityGraph(attributePaths = {"owner", "tags"}) // 필드에 대한 정보까지 채워 속성 경로 알려주는 것
+  @Query("SELECT a FROM LearningActivity a")
+  List<LearningActivity> findAllWithDetails();
+
 }

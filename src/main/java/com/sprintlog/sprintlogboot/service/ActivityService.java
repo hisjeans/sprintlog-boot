@@ -8,9 +8,7 @@ import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
 import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
-import io.micrometer.core.annotation.Timed;
 import jakarta.validation.Valid;
-import java.util.Comparator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +76,7 @@ public class ActivityService {
         .orElseThrow(()->new ActivityNotFoundException(id));
   }
 
-  //   public void create(fianl CreateActivityRequest request, String savedFileName) { - 서비스가 요청과 함께 넘어온 데이터를 자체적으로 가공하지 못하도록 처리할 수 있다
+  //   public void create(final CreateActivityRequest request, String savedFileName) { - 서비스가 요청과 함께 넘어온 데이터를 자체적으로 가공하지 못하도록 처리할 수 있다
   @Transactional
   public LearningActivity create(CreateActivityRequest request, String savedFileName) {
     LearningActivity activity = toActivity(request);
@@ -133,6 +131,11 @@ public class ActivityService {
   public Slice<LearningActivity> sliceByVisibility(Visibility visibility, int page, int size) {
     PageRequest pageable = PageRequest.of(page, size, Sort.by("id"));
     return repository.findByVisibility(visibility, pageable);
+  }
+
+  @Transactional
+  public List<LearningActivity> withDetails() {
+    return repository.findAllWithDetails();
   }
 
 }

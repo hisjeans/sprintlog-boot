@@ -176,7 +176,14 @@ public class ActivityController implements ActivityControllerDocs {
         return ResponseEntity.ok().body(dtoList);
     }
 
+    @GetMapping("/with-details")
+    public ResponseEntity<List<ActivityResponse>> getAllWithDetails(){
+        List<ActivityResponse> list = activityService.withDetails().stream()
+            .map(a -> ActivityResponse.from(a))
+            .toList();
 
+        return ResponseEntity.ok().body(list);
+    }
 
 }
 // 예전 방식

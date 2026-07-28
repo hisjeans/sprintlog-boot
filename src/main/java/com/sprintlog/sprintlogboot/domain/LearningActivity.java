@@ -14,16 +14,17 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 
-import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 
 import java.util.Set;
+import lombok.ToString;
 
 //객체 생성을 위한 설계도 클래스에는 main 메서드를 작성하지 않음
 @Getter
 @Entity
 @Table(name = "activities")
+@ToString(exclude = {"tags", "owner"})
 public class LearningActivity extends BaseEntity{ // 자식 클래스 제거 후 entity로 사용하기 위해 abstract 제거
 
     @Column(nullable = false)
@@ -60,7 +61,7 @@ public class LearningActivity extends BaseEntity{ // 자식 클래스 제거 후
     // FetchType.EAGER: 활동 객체 조회 시 무조건 tags를 조인해서 같이 가져온다 (그렇게 선호하지는 않음)
     // FetchType.LAZY: 활동 객체 조회 시 일단 tags는 안 가져온다 내가 직접 tags를 지목하면 그때 select 통해 가져온다
     // 실무는 LAZY를 더 선호, 필요할 때 가져오는 것을 더 효율적으로 생각하기 때문, 명확하지 않을 때나 기본은 LAZY로 설정하고 필요한 것만 EAGER 사용
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "activity_tags", joinColumns = @JoinColumn(name = "activity_id"))
     // join되는 외래 키 "activity_id" hash set 기반 컬렉션 요청
     @Column(name = "tag")
@@ -73,7 +74,7 @@ public class LearningActivity extends BaseEntity{ // 자식 클래스 제거 후
     // @ManyToOne을 통해 1:N 관계라는 것을 알려주고, 연관관계의 주인인 activities에게 어떤 User가 추가한 활동인지에 대한 정보를 joinColumn으로 알려주겠다
     // 이름은 "owner_id"로 설정하겠다 -> 이 값이 곧 외래키(FK)가 된다
     // 연관관계의 주인: 관계를 저장하거나 변경하는 것이 가능
-    @ManyToOne // 1:N 관계, User 한 명이 나를 많이 등록할 수 있다
+    @ManyToOne(fetch = FetchType.LAZY) // 1:N 관계, User 한 명이 나를 많이 등록할 수 있다
     @JoinColumn(name="owner_id")
     @JsonIgnore
     private User owner;
