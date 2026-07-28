@@ -1,5 +1,6 @@
 package com.sprintlog.sprintlogboot.service;
 
+import com.sprintlog.sprintlogboot.domain.ActivityAuditLog;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
 import com.sprintlog.sprintlogboot.domain.Visibility;
@@ -8,6 +9,7 @@ import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
 import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
+import com.sprintlog.sprintlogboot.repository.AuditLogRepository;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ActivityService {
 
   private final ActivityRepository repository; // 데이터베이스 연동 위한
+  private final AuditLogRepository auditLogRepository;
 
   // 사실 조회 기능에는 굳이 필요 없지만 읽기 전용으로 save, delete 동작 막아주는 역할, 무조건 조회밖에 안 되도록 강제할 수 있다
   // 영속성 컨텍스트 범위 지정 가능
@@ -138,4 +141,26 @@ public class ActivityService {
     return repository.findAllWithDetails();
   }
 
+
+  public List<ActivityAuditLog> history() {
+    // 활동 변경 이력 조회 목록으로 데이터 보관하기 위해 별도의 테이블 필요할 것
+    return auditLogRepository.findAllByOrderByIdDesc();
+  }
+
+  @Transactional
+  public void demoAtomicRegister(boolean fail) {
+    LearningActivity activity = repository.save(new LearningActivity(
+        ActivityCategory.LECTURE, "원자성 데모 학습",
+        30, Visibility.PUBLIC, "이강사",
+        null, null
+    ));// 데모 객체 생성
+
+    auditLogRepository.save(new ActivityAuditLog(
+        "CREATE", "활동 생성(원자성 데모)"+activity.getTitle()
+    ));
+
+    if (fail) {
+      throw new IllegalArgumentException("원자성 시연: 등록 도중 실패 -> 활동, 이력 둘 다 롤백!");
+    }
+  }
 }
