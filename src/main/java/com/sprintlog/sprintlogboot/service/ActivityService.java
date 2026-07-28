@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -30,6 +31,7 @@ public class ActivityService {
 
   private final ActivityRepository repository; // 데이터베이스 연동 위한
   private final AuditLogRepository auditLogRepository;
+  private final AuditService auditService;
 
   // 사실 조회 기능에는 굳이 필요 없지만 읽기 전용으로 save, delete 동작 막아주는 역할, 무조건 조회밖에 안 되도록 강제할 수 있다
   // 영속성 컨텍스트 범위 지정 가능
@@ -161,6 +163,22 @@ public class ActivityService {
 
     if (fail) {
       throw new IllegalArgumentException("원자성 시연: 등록 도중 실패 -> 활동, 이력 둘 다 롤백!");
+    }
+  }
+
+  @Transactional(propagation = Propagation.REQUIRED)
+  public void demoPropagation(boolean fail) { // fail값을 true로 주면 예외 발생시킬 것
+    // ① 시도 이력 — REQUIRES_NEW(별도 빈 호출 → 프록시 경유 → 독립 트랜잭션으로 즉시 커밋)
+    auditService.logAttempt("CREATE_ATTEMPT", "활동 등록 시도(전파 데모)");
+
+    // ② 본 작업 — 부모 트랜잭션에서 활동 저장
+    // 롤백의 대상은 repository.save
+    repository.save(new LearningActivity(
+        ActivityCategory.LECTURE, "전파 데모 학습", 30, Visibility.PUBLIC, "이강사", null, null));
+
+    // ③ 실패하면 부모만 롤백 — 위 시도 이력(①)은 이미 커밋되어 살아남는다.
+    if (fail) {
+      throw new IllegalStateException("전파 시연: 등록 실패 → 활동은 롤백, 시도 이력은 남음(REQUIRES_NEW)");
     }
   }
 }
