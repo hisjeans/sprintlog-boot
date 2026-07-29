@@ -7,6 +7,7 @@ import com.sprintlog.sprintlogboot.domain.Visibility;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.response.ActivityResponse;
+import com.sprintlog.sprintlogboot.exception.ActivityArchiveException;
 import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.repository.AuditLogRepository;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true) // 클래스 선언부에 transactional 붙일 수 있다 - 메서드마다 붙일 필요 없다
 // 클래스 레벨에 @Transactional을 설정하면 모든 메서드가 readOnly 트랜잭션을 가지게 된다
 public class ActivityService {
 
@@ -179,6 +181,17 @@ public class ActivityService {
     // ③ 실패하면 부모만 롤백 — 위 시도 이력(①)은 이미 커밋되어 살아남는다.
     if (fail) {
       throw new IllegalStateException("전파 시연: 등록 실패 → 활동은 롤백, 시도 이력은 남음(REQUIRES_NEW)");
+    }
+  }
+
+  @Transactional(rollbackFor = ActivityArchiveException.class) // ActivityArchiveException이 RuntimeException 상속 받는데 RuntimeException이 아닌 경우도(롤백 대상이 아닌 경우) 예외로 처리하고 싶다
+  public void archive(boolean fail) throws ActivityArchiveException { // 예외 처리 강요, 직접 롤백 요청해야 한다, 여러 종류 예외 처리하기 위해 {}에 담아 전달
+    repository.save(new LearningActivity(
+        ActivityCategory.READING, "보관 시연 활동(rollbackFor 없음)", 20, Visibility.PUBLIC, null, null, "보관용 책"));
+
+    if (fail) {
+      // 체크 예외 — 기본 롤백 대상이 아니다 → 위 저장은 커밋되어 남는다.
+      throw new ActivityArchiveException("보관 실패(체크 예외) — 하지만 기본 롤백은 안 된다");
     }
   }
 }
