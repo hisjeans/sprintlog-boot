@@ -30,6 +30,9 @@ dependencies {
 	// JPA(표준)위에 추상화 객체를 엊어서 JPA를 좀 더 편하게 사용할 수 있는 라이브러리
 	// 구현체 Hibernate가 포함되어 있다
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	// Actuator - 애플리케이션 모니터링(상태, 정보, 지표) 수치 전달
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	// Spring AOP - @Aspect / @Around 로 횡단 관심사 (로깅, 실행시간) 분리
 
 	// [신규] Lombok
