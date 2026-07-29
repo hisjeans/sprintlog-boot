@@ -3,14 +3,20 @@ package com.sprintlog.sprintlogboot.dto.request;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.Visibility;
+import com.sprintlog.sprintlogboot.validation.ValidActivityByType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.time.LocalDateTime;
 import java.util.Set;
 
+@ValidActivityByType
 @Schema(description = "활동 생성 요청 본문") // swagger 제공하는 schema 붙여 설명
 public record CreateActivityRequest(
         // 빈 문자열, 공백 문자열 허용 대신 null은 안 됨!
@@ -27,6 +33,7 @@ public record CreateActivityRequest(
         // 빈 문자열, 공백문자열 null 모두 안 됨!
         @Schema(description = "학습 제목", examples = "Spring Bean Scope", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank(message = "제목은 비워둘 수 없습니다.")
+        @Size(max = 100, message = "제목은 100자를 넘길 수 없습니다.")
         String title,
 
         @Schema(description = "학습 시간(분, 1~1440)", examples = "Spring Bean Scope", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -35,18 +42,32 @@ public record CreateActivityRequest(
         int minutes,
 
         @Schema(description = "공개 여부", examples = "PUBLIC", requiredMode = Schema.RequiredMode.REQUIRED)
-        @NotNull(message = "공개 여부는 필수입니다.")
+        @NotNull(message = "공개 여부는 필수입니다.") // enum 타입 not null 세팅
         Visibility visibility,
 
         // 선택값들
         @Schema(description = "태그 목록(선택)", examples = "[\"Spring\", \"Java\"]") // "\" 추가해 문자열 표현하기 위해 쓴 것임을 표시
-        Set<String> tags,
-        @Schema(description = "강사 이름 (type=LECTURE 일 때)", examples = "이강사")
-        String instructorName, // LectureLog만 사용
-        @Schema(description = "완료율 % (type=PRACTICE 일 때)", examples = "85")
-        int completionRate,
-        @Schema(description = "책 제목 (type=READING 일 때)", examples = "스프링 인 액션")
+        @Size(max = 10, message = "태그는 최대 10개까지 붙일 수 있습니다.") // 컬렉션의 크기도 제한 가능, set에 대한 규칙
+        Set<
+            @Size(max = 20, message = "각 태그는 20자를 넘을 수 없습니다.")
+            @Pattern(regexp = "^[A-Za-z0-9가-힣_-]+$", message = "태그는 한글, 영문, 숫자, _, -만 쓸 수 있습니다(공백, 특수문자 불가).")
+            String> tags,
 
+        @Schema(description = "학습한 날짜(선택, 미래 불가)", examples = "2026-07-20")
+        @PastOrPresent(message = "학습한 날짜는 미래일 수 없습니다.")
+        LocalDateTime studiedOn,
+
+        @Schema(description = "강사 이름 (type=LECTURE 일 때)", examples = "이강사")
+        @Size(max = 50, message = "강사 이름은 50자를 넘을 수 없습니다.")
+        String instructorName, // LectureLog만 사용
+
+        @Schema(description = "완료율 % (type=PRACTICE 일 때)", examples = "85")
+        @Min(value = 0, message = "완료율은 0 이상이어야 합니다.")
+        @Max(value = 100, message = "완료율은 100을 넘을 수 없습니다.")
+        Integer completionRate,
+
+        @Schema(description = "책 제목 (type=READING 일 때)", examples = "스프링 인 액션")
+        @Size(max = 200, message = "책 제목은 200자를 넘을 수 없습니다.")
         String bookTitle
 ) {
 }

@@ -88,7 +88,9 @@ public class ActivityService {
   public LearningActivity create(CreateActivityRequest request, String savedFileName) {
     LearningActivity activity = toActivity(request);
     activity.attachFile(savedFileName);
-    return repository.save(activity);
+    LearningActivity saved = repository.save(activity); // DB에 save
+    log.info("활동 생성 완료 id={}, category={}, title={}", saved.getId(), saved.getCategory(), saved.getTitle());
+    return saved;
   }
   // if) 세세한 것까지 세팅하고 싶다면 생성자 이용해 직접 만든다
 
@@ -124,7 +126,10 @@ public class ActivityService {
     // JPA가 적용된 상태에서의 update는 findById로 조회해 온 Entity를 setter로 변경
     // 변경 후 명시적으로 save() 호출하면 영속성 컨텍스트의 변경 감지(dirty checking)에 의해 update 쿼리가 날아간다
     // save를 부르지 않아도 findById로 조회했을 때 조회된 내용과 복사본을 두는데 setter 수정된 내용과 복사본 사이 차이가 있다면 update가 날라간다 - transaction이 끝났을 때, 더이상 수정될 내용은 없다고 entity가 판단
-    return repository.save(activity);// update문이 나갈 것
+    LearningActivity saved = repository.save(activity);
+    log.info("활동 수정 완료 id={}", saved.getId());
+    return saved;
+    // update문이 나갈 것
   }
 
   @Transactional
@@ -133,6 +138,7 @@ public class ActivityService {
       throw new ActivityNotFoundException(id);
     }
     repository.deleteById(id);
+    log.info("활동 삭제 완료 id={}", id);
   }
 
   public Slice<LearningActivity> sliceByVisibility(Visibility visibility, int page, int size) {

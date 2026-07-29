@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 @Slf4j
@@ -31,8 +32,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ProblemDetail handleBusiness(BusinessException e) {
         ErrorCode ec = e.getErrorCode();
-         // 4xx(클라이언트 문제)는 예상된 상황이니 WARN 레벨로 간결하게
-        log.warn("[{}] {}", ec.getCode(), e.getMessage());
+        // 5xx(우리 서버 문제)는 원인을 확인해야 하니 ERROR + 스택트레이스(에러 객체를 마지막 인자로 전달)
+        if (ec.getStatus().is5xxServerError()) {
+            log.error("[{}] {}", ec.getCode(), e.getMessage());
+        } else {
+            // 4xx(클라이언트 문제)는 예상된 상황이니 WARN 레벨로 간결하게
+            log.warn("[{}] {}", ec.getCode(), e.getMessage());
+        }
         return problem(ec.getStatus(), ec.getCode(), e.getMessage(), ec.getDefaultMessage());
     } // ActivityNotFound, InvalidException 처리
 
@@ -48,8 +54,7 @@ public class GlobalExceptionHandler {
             errors.put(error.getField(), error.getDefaultMessage());
         });
 
-        ProblemDetail pd
-                = problem(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_INPUT.getCode(), "요청 본문에 일부 필드가 유효하지 않습니다.", "입력 검증 실패");
+        ProblemDetail pd = problem(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_INPUT.getCode(), "요청 본문에 일부 필드가 유효하지 않습니다.", "입력 검증 실패");
         pd.setProperty("errors", errors);
         return pd;
 // warn 레벨로 찍을  수 있다
@@ -63,6 +68,14 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_INPUT.getCode(), // 예외 원인이 무엇인지 확인하기 위한 식별자 getCode() 활용
                 "요청 본문(JSON)을 읽을 수 없습니다. 형식이나 값을 확인하세요.", "요청 본문 오류");
         // warn 레벨로 찍을 수 있다
+    }
+
+    // 404 — 매핑된 핸들러가 없는 경로. 프레임워크가 던지는 NoResourceFoundException → C002
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ProblemDetail handleNoResource(NoResourceFoundException e) {
+        log.warn("없는 경로 요청: {}", e.getResourcePath()); // client 요청 잘못 - warn
+        return problem(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND.getCode(),
+            "요청하신 경로를 찾을 수 없습니다.", "경로 없음");
     }
 
     // 400 — 경로 변수·쿼리 파라미터의 타입 불일치(예: /activities/abc). 프레임워크 예외 → C001
