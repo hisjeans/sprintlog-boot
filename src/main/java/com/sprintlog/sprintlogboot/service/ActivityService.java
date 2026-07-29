@@ -11,6 +11,8 @@ import com.sprintlog.sprintlogboot.exception.ActivityArchiveException;
 import com.sprintlog.sprintlogboot.exception.ActivityNotFoundException;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.repository.AuditLogRepository;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,9 @@ public class ActivityService {
   private final ActivityRepository repository; // 데이터베이스 연동 위한
   private final AuditLogRepository auditLogRepository;
   private final AuditService auditService;
+  // 지표 수집기(Micrometer) - 커스텀 지표를 여기에 등록 후 증감시킨다
+  // 의존성 주입 -> 자동 빈 등록
+  private final MeterRegistry meterRegistry;
 
   // 사실 조회 기능에는 굳이 필요 없지만 읽기 전용으로 save, delete 동작 막아주는 역할, 무조건 조회밖에 안 되도록 강제할 수 있다
   // 영속성 컨텍스트 범위 지정 가능
@@ -58,6 +63,7 @@ public class ActivityService {
         .toList();
   }
 
+  @Timed(value = "sprintlog.activity.find.paging", description = "활동 조회 소요 시간(페이징)") // 간단하게 작성해 처리 가능
   public Page<LearningActivity> page(String sort, int page, int size, Long ownerId) {
 
     // 기존에는 정렬 기준을 Comparator로 지정했는데, JPA에서 제공하는 페이징 기능을 사용하기 위해
@@ -83,18 +89,50 @@ public class ActivityService {
         .orElseThrow(()->new ActivityNotFoundException(id));
   }
 
+  /*
   //   public void create(final CreateActivityRequest request, String savedFileName) { - 서비스가 요청과 함께 넘어온 데이터를 자체적으로 가공하지 못하도록 처리할 수 있다
   @Transactional
   public LearningActivity create(CreateActivityRequest request, String savedFileName) {
-    LearningActivity activity = toActivity(request);
-    activity.attachFile(savedFileName);
-    LearningActivity saved = repository.save(activity); // DB에 save
-    log.info("활동 생성 완료 id={}, category={}, title={}", saved.getId(), saved.getCategory(), saved.getTitle());
-    return saved;
+    return timer.record(()->{
+      LearningActivity activity=toActivity(request);
+      activity.attachFile(savedFileName);
+      LearningActivity saved=repository.save(activity);
+
+      // 카테고리 별로 태그를 쪼개서 생성된 활동 객체의 개수를 카운팅
+      meterRegistry.counter("sprintlog.activities.created", "category", saved.getCategory().name()).increment();
+      // 카테고리 태그는 종류가 세 가지일 것 LECTURE, PRACTICE, READING
+      // 만일 save했던 활동 객체가 PRACTICE이면 PRACTICE: 1, 다음에 save된 객체가 PRACTICE: 2...
+
+      // 개수가 아니라 '양'을 누적: 어떤 활동 객체이든 상관 없이 학습한 시간(분)을 누적해서 더해라
+      meterRegistry.counter("sprintlog.study.minutes.total").increment(saved.getMinutes()); // 양 체크
+
+      log.info("활동 생성 완료 id={}, category={}, title={}", saved.getId(), saved.getCategory(), saved.getTitle());
+      return saved;
+    });
   }
+   */
   // if) 세세한 것까지 세팅하고 싶다면 생성자 이용해 직접 만든다
 
+  //   public void create(fianl CreateActivityRequest request, String savedFileName) { - 서비스가 요청과 함께 넘어온 데이터를 자체적으로 가공하지 못하도록 처리할 수 있다
+  @Transactional
+  public LearningActivity create(CreateActivityRequest request, String savedFileName) {
+    return meterRegistry.timer("sprintlog.activity.create.time").record(
+        ()->{
+          LearningActivity activity = toActivity(request);
+          activity.attachFile(savedFileName);
+          LearningActivity saved = repository.save(activity);
 
+          // 카테고리별로 태그를 쪼개서 생성된 활동 객체의 개수를 카운팅
+          meterRegistry.counter("sprintlog.activities.created", "category", saved.getCategory().name()).increment();
+
+          // 개수가 아니라 '양'을 누적: 어떤 활동 객체이든 상관 없이 학습한 시간(분)을 누적해서 더한다
+
+          meterRegistry.counter("sprintlog.study.minutes.total").increment(saved.getMinutes());
+
+          log.info("활동 생성 완료 id={}, category={}, title={}", saved.getId(), saved.getCategory(), saved.getTitle());
+          return saved;
+        });
+  }
 
   // private 클래스 안에서만 사용하는 것이므로 아래쪽에 배치하는 것이 일반적
   // 평탄화 후 — 하위 타입 생성 switch 가 사라졌다.
