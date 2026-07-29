@@ -2,6 +2,25 @@
 # 공통 파일
 # Spring Boot가 초기화될 때 항상 이 파일을 읽는다
 
+# 애플리케이션 정보
+info:
+  app:
+    name: SprintLog
+    description: 학습 기록 서비스
+    version: 1.0.0
+    encoding: UTF-8
+    java-version: 17
+
+  company:
+    name: MyCompany
+    email: support@mycompany.com
+    website: https://mycompany.com
+
+  team:
+    developer: Backend Team
+    manager: John Doe
+    contact: backend-team@mycompany.com
+
 spring:
   application:
     name: sprintlog-boot
@@ -30,6 +49,10 @@ management:
     health:
       show-details: always
       # 개발 환경에서는 always, 운영에서는 when-authorized 인증이 완료된 사용자에게만 보여주겠다(허가된 사람만 요청 가능하도록)
+
+  info:
+    env:
+      enabled: true # info 정보 외부 노출 활성화
 
   server:
     port: 9090
