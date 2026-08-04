@@ -1,0 +1,30 @@
+# 테스트할 때만 사용할 설정
+# 따로 프로필 설정하지 않으면 공통 yml 동작
+# 프로필 test로 지정하면 test yaml 파일 동작
+# test 전용 설정. 테스트 클래스에서 이 설정을 불러오는 로직을 따로 작성해 적용
+spring:
+    # 1. H2 인메모리 데이터베이스 설정 (테스트용)
+    # H2 임시 테스트용, 다양한 언어 제공(Oracle, MySQL, PostgreSQL)
+    # "mem" 인메모리
+    # connection 끊어지면 메모리 DB를 통으로 지워버린다 - 이를 방지하기 위해 "DB_CLOSE_DELAY=-1", jbm 살아 있는 동안 유지
+    # 스프링 종료 로직-데이터베이스 종료 로직 충돌이 발생할 수 있는데, 불필요한 예외 처리 방지하기 위해 "DB_CLOSE_ON_EXIT=FALSE"
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+    # 관리자는 비밀번호 필요없다
+
+  # 2. JPA 설정 (테스트 시작 시 테이블 생성, 완료 후 드롭)
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+#        generate_statistics: true # 쿼리 수 검증(N+1 검증)용
+
+# 3. 테스트 시 로그 레벨 조절 (지저분한 로그 방지)
+logging:
+  level:
+    root: INFO
+    com.sprintlog: DEBUG # 우리 패키지만 상세히
