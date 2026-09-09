@@ -4,6 +4,7 @@ package com.sprintlog.sprintlogboot.service;
 import com.sprintlog.sprintlogboot.aspect.LogExecutionTime;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
+import com.sprintlog.sprintlogboot.domain.WeeklyGoal;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -162,6 +163,15 @@ public class ActivityDashboard {
             }
         }
         return Collections.unmodifiableList(result); //외부에서 add, read 불가능
+    }
+
+    public int achievementRate(int goalMinutes) {
+        WeeklyGoal goal = new WeeklyGoal(goalMinutes);// 테스트에서는 60을 받았지만 앞으로 생성될 값은 다 다를 것이기 때문에 goalMinutes
+        int studied=0;
+        for (LearningActivity activity : repository.findAll()) {
+            studied += activity.getMinutes();
+        }
+        return goal.achievementRate(studied);
     }
 }
 

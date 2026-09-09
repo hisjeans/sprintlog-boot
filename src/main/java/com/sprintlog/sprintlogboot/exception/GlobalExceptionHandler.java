@@ -75,7 +75,7 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleNoResource(NoResourceFoundException e) {
         log.warn("없는 경로 요청: {}", e.getResourcePath()); // client 요청 잘못 - warn
         return problem(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND.getCode(),
-            "요청하신 경로를 찾을 수 없습니다.", "경로 없음");
+            "요청하신 경로를 찾을 수 없습니다!", "경로 없음");
     }
 
     // 400 — 경로 변수·쿼리 파라미터의 타입 불일치(예: /activities/abc). 프레임워크 예외 → C001
@@ -84,6 +84,12 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_INPUT.getCode(),
             "요청 값 '" + e.getName() + "' 의 형식이 올바르지 않습니다.", "잘못된 요청 파라미터");
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleIllegalArgumentException(IllegalArgumentException e) {
+        return problem(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_INPUT.getCode(), e.getMessage(), "잘못된 요청");
+    }
+// 4xx 번대 대부분 client 잘못 -> warn 으로 찍는다
 
     // 500 — 그 밖의 예상 못 한 오류. 원본 메시지는 로그에만, 클라이언트엔 안전한 문구만
     @ExceptionHandler(Exception.class)

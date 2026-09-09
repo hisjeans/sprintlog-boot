@@ -199,6 +199,16 @@ public class ActivityController implements ActivityControllerDocs {
 
     }
 
+    @GetMapping("/achievement")
+    public ResponseEntity<Map<String, Integer>> achievement(@RequestParam int goalMinutes) {
+        if (goalMinutes <= 0) {
+            throw new IllegalArgumentException("주간 목표 시간은 1분 이상이어야 합니다.");
+        }
+        int rate=dashboard.achievementRate(goalMinutes);
+        return ResponseEntity.ok().body(Map.of("goalMinutes", goalMinutes, "achievementRate", rate));
+    } // response용 DTO를 생성해 반환거나 서비스에서 dto 전달하는 것이 안전하다, 현재는 단순 테스트용
+    // 테스트 진행 권장, 현재는 시간 상 생략
+
     // 트랜잭션 원자성 시연 - 활동 등록 (활동 저장 + 이력 기록)을 한 트랜잭션
     // 둘 중 하나라도 실패하면 롤백
     // fail이란 값을 false로 주면 둘 중 하나라도 실패하면 롤백되는지 확인하겠다는 의미
