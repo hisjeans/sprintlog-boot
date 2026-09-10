@@ -67,7 +67,7 @@ HEALTHCHECK --interval=15s --timeout=3s --start-period=60s --retries=5 \
 # --retries=5: 만일 3초 이내 응답을 보냈는데 오지 않았다, 재요청 횟수, 건강하지 않은 상태, 요청 제대로 처리할 수 없는 상태 - 서버 내린다, 그 재시도 횟수
 # 응답 오지 않으면 서버를 아예 내려버리겠다
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
 # CMD, RUN은 기본 실행 명령을 의미, 컨테이너 실행 시에 다른 명령어가 주어지면 그 명령어로 대체된다
 # ENTRYPOINT는 반드시 실행되어야 할 명령어를 의미 다른 명령어로 대체되지 않는다
 # 스프링 부트는 무조건 -jar 옵션으로 실행되어야 하기 때문에 강조의 의미로 ENTRYPOINT 선언 - 절대 바꾸면 안 된다는 의미 강조하기 위해
