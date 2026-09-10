@@ -1,6 +1,6 @@
 
 # --- 1. build 스테이지 ------------------------------------------------------------------------------
-FROM eclipse-temurin:17-jdk-alpine AS build
+FROM eclipse-temurin:17-jdk AS build
 WORKDIR /workspace
 
 COPY gradlew settings.gradle build.gradle ./
@@ -18,17 +18,21 @@ RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 # 소스코드 복사 후 실행 가능한 jar 빌드
 COPY src ./src
 # 의존성 라이브러리를 많이 사용할수록 위에 미리 써놓지 않으면 계속 생성해야 하는데 이미지를 재빌드할 때 재사용할 수 있다
-RUN ./gradlew clean build -x test
+RUN ./gradlew bootJar -x test
 # 원래라면 빌드 과정에서 테스트 진행, 현재는 시간상 생략
 # -x: 제외
 # 개발 과정에서 테스트를 이미지 빌드에서 제외 가능
 # 왠만하면 "-x test" 는 작성하지 않는 것 권장
 # 여기까지 수행되었다면 jar 파일이 나올 것
-
+# bootJar: springframework 전용, 자바 컴파일, 단위, 통합테스트 실행, plain jar 파일 아예 생성하지 않는다
+# 기존에는 clean build 작성했지만 docker 파일에서는 clean build하는 이유 없다, 이전 폴더가 존재하지 않는다(복사하고 떠와서 진행하기 때문)
+# docker 컨테이너는 시작하기 전 항상 비어 있다 - 오히려 불필요한 task 진행되면서 시간 지연될 수 있다, clean X
+# 로컬 개발 환경: gradlew clean build, Dockerfile: clean 할 필요 없음(어차피 새로운 환경에서 진행되기 때문)
+# bootJar를 통해 실행 가능한 jar 하나만 생성
 
 
 # --- 2. run 스테이지 ------------------------------------------------------------------------------
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre
 # jre 를 사용해 용량 더 줄인다
 
 WORKDIR /app
@@ -44,7 +48,6 @@ COPY --from=build /workspace/build/libs/sprintlog-boot-0.0.1-SNAPSHOT.jar app.ja
 
 ENV TZ=Asia/Seoul
 # 타임존 설정 - 설정하지 않으면 UTC로 설정된다(영국 시간대와 동일해진다)
-RUN apk add --no-cache tzdata  # alpine 버전 사용 시 필요
 
 
 ENV SPRING_PROFILES_ACTIVE=prod
