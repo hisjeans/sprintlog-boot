@@ -14,6 +14,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -88,13 +89,38 @@ public class S3Service implements FileStorage{
 
   }
 
+  // 응답 헤더에 Content-Disposition에 attachment; 를 작성하면 브라우저로 응답을 하는 것이 아닌
+  // 다운로드로 응답하게 된다
+  // 클라이언트가 다운로드 요청을 보내면 S3에게 다운로드 가능한 URL을 받아서 응답하고, 클라이언트는 해당 URL로 redirect해서 다운로드를 S3에게 직접 요청
   @Override
-  public String getDownloadUrl(String storedName) {
-    return "";
+  public String getDownloadUrl(String storedName) {// url을 받기 때문에 getFileUrl과 대부분 로직 동일, responseContentDisposition만 추가
+    GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+        .signatureDuration(Duration.ofMinutes(
+            props.getPresignMinutes())) // 분으로 세팅, 5분 - 메서드에 따라 seconds, hours, minutes, days... 달라진다(최대 시간은 7일, 그 이상 늘릴 수 없다)
+        .getObjectRequest(GetObjectRequest.builder()
+            .bucket(props.getBucket())
+            .key(storedName)
+            .responseContentDisposition("attachment; filename=\"" + storedName + "\"") // "\" 문자열 (예: filename="test.png" - contentdisposition의 header에 이 문자열을 넣으려는 것, attachment - 다운로드 형식으로 응답)
+            .build())
+        .build();
+    return presigner.presignGetObject(presignRequest).url().toString(); // 요청을 보내면 응답 결과가 오는데 presignGetObject 리턴해주는 객체 타입이 PresignedGetObjectRequest
+    // 사용자 다운로드 -> WAS <-다운로드 가능한 임시 URL-> AWS S3
+    // WAS - 임시 URL -> 클라이언트 -Redirect-> S3 - 직접 download 제공 -> 클라이언트
+    // 우리 서버 WAS는 중개 역할한다, 다운로드 직접하는 게 아니라 임시 다운로드 URL 제공하고 요청은 클라이언트가 직접 한다, 서버 부담 적다, 비용 및 시간 절약
+    // 만일 직접 한다면? 클라이언트 -1번 게시물 사진-> WAS -사진-> AWS S3 -MultipartFile-> WAS -> client - 클라이언트 요청이 많아질수록 계속 파일 받아 응답해야 하고, 용량, 시간 부담, 서버 과부하 가능성까지
+
   }
 
   @Override
-  public void deleteFile(String storedName) {
+  public void deleteFile(String storedName) {// 객체 지우는 경우 - 예: 이미지 품고 있는 활동 객체 삭제
+    if (storedName == null || storedName.isBlank()) {
+      return;
+    }
+    s3.deleteObject(DeleteObjectRequest.builder()
+        .bucket(props.getBucket())
+        .key(storedName)
+        .build());
+    log.info("S3 객체 삭제: {}", storedName);
 
   }
 }

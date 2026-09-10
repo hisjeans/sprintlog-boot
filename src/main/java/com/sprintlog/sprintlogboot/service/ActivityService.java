@@ -40,6 +40,8 @@ public class ActivityService {
   // 의존성 주입 -> 자동 빈 등록
   private final MeterRegistry meterRegistry;
 
+  private FileStorage fileStorage;
+
   // 사실 조회 기능에는 굳이 필요 없지만 읽기 전용으로 save, delete 동작 막아주는 역할, 무조건 조회밖에 안 되도록 강제할 수 있다
   // 영속성 컨텍스트 범위 지정 가능
 //  @Transactional(readOnly = true)
@@ -172,10 +174,14 @@ public class ActivityService {
 
   @Transactional
   public void delete(Long id) {
-    if (!repository.existsById(id)){ // 해당 id에 대한 데이터 존재 여부 확인(T/F)
-      throw new ActivityNotFoundException(id);
-    }
+    // 이제는 첨부파일명 확보해야 한다
+    LearningActivity activity = repository.findById(id)
+        .orElseThrow(() -> new ActivityNotFoundException(id));
+    String storedName = activity.getAttachmentFileName();
+
     repository.deleteById(id);
+
+    fileStorage.deleteFile(storedName); // 있으면 삭제되고 없다면 아예 메서드 처리되지 않게끔 처리
     log.info("활동 삭제 완료 id={}", id);
   }
 

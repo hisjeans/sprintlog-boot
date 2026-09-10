@@ -12,6 +12,7 @@ import com.sprintlog.sprintlogboot.exception.ActivityArchiveException;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
 import com.sprintlog.sprintlogboot.service.ActivityService;
 import com.sprintlog.sprintlogboot.service.FileService;
+import com.sprintlog.sprintlogboot.service.FileStorage;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Slice;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +45,7 @@ public class ActivityController implements ActivityControllerDocs {
     private final ActivityDashboard dashboard; // 의존성 관계 추가, 상태 보여주는 역할
     private final FileService fileService;
     private final ActivityService activityService; // activity 관련 비즈니스 로직 담당
+    private final FileStorage fileStorage;
     // 컨트롤러 서비스와는 무관한 역할
 
 
@@ -136,6 +139,34 @@ public class ActivityController implements ActivityControllerDocs {
         URI location = URI.create("/api/activities" + saved.getId()); // 기존과 달리 데이터가 insert될 때, 자동으로 아이디 세팅되기 때문에 변경
         return ResponseEntity.created(location).body(toModel(saved));
     }
+
+    // 활동의 첨부 파일 보기 우리 서버가 s3로부터 받은 임시 URL을 302로 응답하면
+    // 클라이언트 측에서 리다이렉트를 통해 s3로 재요청을 보내게 된다
+    @GetMapping("/{id}/attachment")
+    public ResponseEntity<Void> attachment(@PathVariable Long id) {
+        LearningActivity activity = activityService.get(id);
+        String storedName = activity.getAttachmentFileName();
+        if (storedName == null || storedName.isBlank()) {
+            return ResponseEntity.notFound().build(); // 첨부 파일이 없는 활동
+        }
+        return ResponseEntity.status(HttpStatus.FOUND) // FOUND(302) -> redirection 자동 - 3xx -> redirect - url 통해 다시 요청 보내야만 한다는 것
+            .location(URI.create(fileService.getFileUrl(storedName)))
+            .build(); // 첨부 파일이 존재할 때
+    } // 첨부 파일 유무와 상관없이 바디에는 아무것도 넣지 않았다 -> return type void
+
+    // 첨부파일 다운로드 요청, 이것도 마찬가지로 s3로부터 전달받은 임시 URL을 302 status로 응답
+    @GetMapping("/{id}/attachment/download")
+    public ResponseEntity<Void> downloadAttachment(@PathVariable Long id) {
+        LearningActivity activity = activityService.get(id);
+        String storedName = activity.getAttachmentFileName();
+        if (storedName == null || storedName.isBlank()) {
+            return ResponseEntity.notFound().build(); // 첨부 파일이 없는 활동
+        }
+        return ResponseEntity.status(HttpStatus.FOUND) // FOUND(302) -> redirection 자동 - 3xx -> redirect - url 통해 다시 요청 보내야만 한다는 것
+            .location(URI.create(fileService.getDownloadUrl(storedName)))
+            .build(); // 첨부 파일이 존재할 때
+    } // 첨부 파일 유무와 상관없이 바디에는 아무것도 넣지 않았다 -> return type void
+
 
     // 활동 수정, 자원 식별은 Path(/{id}) - 수정할 때는 어떤 객체를 변경할 것인지 지목해줘야 하기 때문
     // 변경할 내용은 본문 (UpdatedActivityRequest)
