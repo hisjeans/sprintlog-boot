@@ -75,6 +75,11 @@ sprintlog:
   sample-data:
     enabled: true
     count: "4"
-
   file-directory: "/Users/apple/Desktop/codeit13-develop/spring-upload"
 
+  storage: local
+  s3:
+    bucket: sprintlog-uploads-8917
+    region: ap-northeast-2
+    endpoint:
+    presign-minutes: 5
