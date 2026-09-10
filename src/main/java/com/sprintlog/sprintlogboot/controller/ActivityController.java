@@ -43,9 +43,8 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 public class ActivityController implements ActivityControllerDocs {
 
     private final ActivityDashboard dashboard; // 의존성 관계 추가, 상태 보여주는 역할
-    private final FileService fileService;
+    private final FileStorage fileService;
     private final ActivityService activityService; // activity 관련 비즈니스 로직 담당
-    private final FileStorage fileStorage;
     // 컨트롤러 서비스와는 무관한 역할
 
 

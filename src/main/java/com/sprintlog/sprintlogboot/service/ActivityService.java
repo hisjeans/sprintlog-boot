@@ -40,7 +40,7 @@ public class ActivityService {
   // 의존성 주입 -> 자동 빈 등록
   private final MeterRegistry meterRegistry;
 
-  private FileStorage fileStorage;
+  private final FileStorage fileStorage;
 
   // 사실 조회 기능에는 굳이 필요 없지만 읽기 전용으로 save, delete 동작 막아주는 역할, 무조건 조회밖에 안 되도록 강제할 수 있다
   // 영속성 컨텍스트 범위 지정 가능
