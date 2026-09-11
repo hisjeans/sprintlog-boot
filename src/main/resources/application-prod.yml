@@ -10,6 +10,16 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:secret}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10 # 커넥션 객체 최대 몇 개, (CPU 코어 수 x 2) + 유효 디스크 수를 주로 따른다(데이터베이스쪽 서버 기준) - 컴퓨터 사양을 조금 탈 수 있다, 풀을 줄이면 성능 올라가는 경우도 빈번하다, 데이터베이스 성능을 따르자
+      connection-timeout: 10000 # 밀리초 단위, = 10초, 커넥션 풀에서 커넥션 객체를 가져오는 데 걸리는 최대 대기 시간, 사용자가 얼마나 대기할 수 있는지, 시간 지나면 예외를 던져 다음에 다시 시도하도록 응답, 현재는 10초 관대하게 잡았지만 대부분 3초를 넘기지 말아야 한다 3초 이상은 빠르게 오류 응답을 주는 편이 좋다
+      max-lifetime: 1740000 # 커넥션 객체의 최대 수명 지정, =29분, 설정하지 않으면 기본 30분, 29분으로 설정한 이유: 하나의 커넥션이 데이터베이스를 굉장히 길게 붙잡는 경우 생긴다 하나의 커넥션 자체가 데이터베이스에 굉장히 오래 물려있는 경우 존재, 30분 지나면 자동으로 연결 끊긴다, 기본적으로 데이터베이스 접속 가능하다를 기반으로 만들어져있다 흔한 경우는 아니지만  만일 30분 이전에 DB가 잘못되어 재부팅했다면 커넥션이 접속 못 하게 될 가능성도 있다, 데이터베이스와 연동 작업은 끝났는데 커넥션이 물려있는 경우도 있다 - 커넥션을 계속 점유해버리면 데이터베이스 연동 작업이 굉장히 느려지고, 사용자들은 조회 응답이 늦어지니 불만이 늘어나는 것, 30분 보다 적게 잡는 것을 권장한다
+      # 거의 대부분 30초에서 N분 잡아주는 것을 권장, 10분도 많다, 기본 시간 보다 짧게 잡아주는 것이 좋다
+      keepalive-time: 300000 # 세션이 살아있는 시간 설정, 커넥션에게 헬스 체크하는 느낌 커넥션 객체가 들어오고 바로 DB에 접속할 수 있도록, 요청이 드문 시간에는 커넥션이 아무것도 하지 않는다 무슨 문제 발생할지 모른다 - NAT, 방화벽, 로드 밸런서가 중간 계층에 존재할 수 있다(웹 서버-데이터베이스)
+      # 예: 요청을 나눠서 전달하는 데 커넥션 객체가 아무것도 하지 않는다면 그동안 요청이 들어오지 않았으니 죽은 것으로 로드 밸런서가 판정하고 연결 끊을 수 있다
+      # 자주 요청을 보내 커넥션 객체가 살아 있음을 확인해야 하는 데 이 주기를 keepalive-time으로 설정할 수 있다
+      # 풀 안에서 놀고 있는(유휴) 커넥션에게 주기적으로 health check를 보내는 간격
+      # max-lifetime 보다 짧게 잡는 것 권장, 대부분 5분 많이 사용 - NFA Gate 도구들이 350초 동안 건들지 않으면 끊었다고 판단하는 경우가 대부분이기 때문에 350초 보다 적게 잡는 것을 선호
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:validate} # 검증만 한다, entity 클래스와 다르면 서버 죽인다, 운영 환경에서는 validate 추천
@@ -23,9 +33,17 @@ sprintlog:
     count: "4"
   file-directory: ${SPRINTLOG_FILE_DIR:/app/uploads} # 컨테이너 안 경로(호스트 절대경로 대신)
 
+  storage: ${SPRINTLOG_STORAGE:s3}
+  s3:
+    bucket: ${SPRINTLOG_S3_BUCKET:sprintlog-uploads-hisjeans}
+    region: ${AWS_REGION:ap-northeast-2}
+    endpoint: ${SPRINTLOG_S3_ENDPOINT:}
+    presign-minutes: ${SPRINTLOG_s3_PRESIGN_MINUTES:5}
+
 # 개발 시에는 자세한 로그가 도움됨
 logging:
   level:
+    root: info
     com.sprintlog: warn
     # 운영환경에서는 경고 이상의 레벨만 보겠다는 의미에서 'warn'
     # "dev" 는 너무 상세하게 다 나오기 때문에 변경한 것
