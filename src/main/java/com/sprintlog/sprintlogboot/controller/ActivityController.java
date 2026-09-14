@@ -135,7 +135,7 @@ public class ActivityController implements ActivityControllerDocs {
         LearningActivity saved = activityService.create(request, savedFileName);// 컨트롤러가 DTO를 Entity로 바꾸지 않도록 한다
 
         // 성공 시 201 Created + Location 헤더(생성된 자원의 주소)를 함께 응답
-        URI location = URI.create("/api/activities" + saved.getId()); // 기존과 달리 데이터가 insert될 때, 자동으로 아이디 세팅되기 때문에 변경
+        URI location = URI.create("/api/activities/" + saved.getId()); // 기존과 달리 데이터가 insert될 때, 자동으로 아이디 세팅되기 때문에 변경
         return ResponseEntity.created(location).body(toModel(saved));
     }
 

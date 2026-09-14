@@ -13,7 +13,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.Set;
 
 @ValidActivityByType
@@ -55,7 +55,7 @@ public record CreateActivityRequest(
 
         @Schema(description = "학습한 날짜(선택, 미래 불가)", examples = "2026-07-20")
         @PastOrPresent(message = "학습한 날짜는 미래일 수 없습니다.")
-        LocalDateTime studiedOn,
+        LocalDate studiedOn,
 
         @Schema(description = "강사 이름 (type=LECTURE 일 때)", examples = "이강사")
         @Size(max = 50, message = "강사 이름은 50자를 넘을 수 없습니다.")
