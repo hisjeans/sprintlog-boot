@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.*;
 @TestPropertySource(properties = {
     "spring.jpa.properties.hibernate.generate_statistics=true",
 }) // 기본값 false, 통계값 잡아줘야 한다 true로 설정
+@ActiveProfiles("test")
 class ActivityRepositoryTest {
 
   @Autowired // 테스트 환경에서는 생성자 의존성 주입을 사용할 수 없어 @Autowired 직접 주입해야 한다

@@ -19,13 +19,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.BDDMockito;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("ActivityService 슬라이스 테스트 (Mockito)")
@@ -37,6 +34,8 @@ class ActivityServiceTest {
   ActivityRepository repository;
   @Mock AuditLogRepository auditLogRepository;
   @Mock AuditService auditService;
+  // FileStorage 가 없어 null pointer exception 발생했다
+  @Mock FileStorage fileStorage;
 
   // 서비스의 create는 timer가 걸려 있음 -> MeterRegistry의 timer는 실제로 동작해야 한다 (Mock 안 됨)
   // @Spy를 걸어서 실제 기능이 동작할 수 있는 객체로 둔다 - 일부 기능은 동작할수 있게끔 처리
@@ -127,7 +126,11 @@ class ActivityServiceTest {
     @DisplayName("존재하면 그 id로 삭제한다. (existsById 확인)")
     void 정상_삭제() {
       // given
-      given(repository.existsById(1L)).willReturn(true);
+      LearningActivity activity = sample(); // 더미 객체 먼저 받아온다
+
+      // repository.findById(1L); 현재 repository는 가짜 객체, 비어 있기 때문에 아무것도 줄 수 없다, 실제 DB를 조회하지 않는다
+      // mock 객체가 당황하지 않도록 findById()가 호출되었을 때 반환할 값을 미리 지정해야 한다
+      given(repository.findById(1L)).willReturn(Optional.of(activity));
 
       // when
       service.delete(1L); // void 메서드, 돌려받는 게 없다 - 상태 검증 필요 없다, 행위 검증만
@@ -141,7 +144,7 @@ class ActivityServiceTest {
     @DisplayName("없으면 예외 - 삭제는 일어나지 않는다.")
     void 없으면_삭제안함() {
       // given
-      given(repository.existsById(999L)).willReturn(false);
+      given(repository.findById(999L)).willReturn(Optional.empty());
 
       // when & then
       assertThatThrownBy(()->service.delete(999L)).isInstanceOf(ActivityNotFoundException.class);
@@ -223,7 +226,7 @@ class ActivityServiceTest {
       // given
       // given(repository.deleteById(1L)).willThrow(new RuntimeException("DB 오류")); - deleteById가 void, given 절 안에 인자로 들어갈 수 없다
       // => 순서를 뒤집어서 해결하자
-      given(repository.existsById(1L)).willReturn(true);
+      given(repository.findById(1L)).willReturn(Optional.of(sample()));
       // deleteById를 호출하면서 1L을 주면 예외를 일부러 발생 시키겠다
       willThrow(new RuntimeException("DB 오류")).given(repository).deleteById(1L);
       // 실제로는 예외가 발생하지 않지만 일부로 데이터베이스 예외 발생한다
