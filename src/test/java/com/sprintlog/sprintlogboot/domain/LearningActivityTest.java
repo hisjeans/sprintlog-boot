@@ -32,7 +32,7 @@ class LearningActivityTest {
       // 여러 값을 *한꺼번에* 검증 — 하나가 틀려도 나머지까지 다 확인해 보고(그룹 검증)
       assertAll( // junit에서 제공
           // Assertj에서 제공
-          () -> assertThat(activity.getTitle()).isEqualTo("스프링 강의"),
+          () -> assertThat(activity.getTitle()).isEqualTo("테스트 강의"),
           () -> assertThat(activity.getMinutes()).isEqualTo(30),
           () -> assertThat(activity.getCategory()).isEqualTo(ActivityCategory.LECTURE),
           () -> assertThat(activity.getVisibility()).isEqualTo(Visibility.PUBLIC)

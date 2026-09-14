@@ -1,6 +1,5 @@
 package com.sprintlog.sprintlogboot.controller;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -18,7 +17,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.mockito.BDDMockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.Page;
@@ -29,8 +27,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 @WebMvcTest(ActivityController.class)
 @DisplayName("ActivityController 웹 계층 테스트")
@@ -220,15 +216,15 @@ class ActivityControllerTest {
 
       // given
       given(service.update(eq(999L), any(UpdateActivityRequest.class))).willThrow(
-          ActivityNotFoundException.class);
+          new ActivityNotFoundException(999L));
 
       // when & then
 
-      mvc.perform(patch("/api/v1/activities/999")
+      mvc.perform(put("/api/v1/activities/999")
               .contentType(MediaType.APPLICATION_JSON)
               .content("{\"title\": \"x\",\"visibility\": \"PUBLIC\"}"))
           .andExpect(status().isNotFound())
-          .andExpect(jsonPath("S.code").value("A001"));
+          .andExpect(jsonPath("$.code").value("A001"));
 
       }
     }
@@ -252,7 +248,7 @@ class ActivityControllerTest {
       void 없으면_404() throws Exception {
         // ControllerService delete - void
         willThrow(new ActivityNotFoundException(999L)).given(service).delete(999L);
-        mvc.perform(delete("api/v1/activities/999"))
+        mvc.perform(delete("/api/v1/activities/999"))
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.code").value("A001"));
       }

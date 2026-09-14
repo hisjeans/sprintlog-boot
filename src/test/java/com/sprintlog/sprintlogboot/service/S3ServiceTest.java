@@ -10,9 +10,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -101,7 +99,7 @@ class S3ServiceTest {
     // when & then
     assertThatThrownBy(()->s3Service.saveFile(evil))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("허용되지 않은 파일");
+        .hasMessageContaining("허용되지 않는 파일");
 
   }
 
