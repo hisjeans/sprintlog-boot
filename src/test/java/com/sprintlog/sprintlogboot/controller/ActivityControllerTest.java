@@ -81,7 +81,7 @@ class ActivityControllerTest {
           .andExpect(jsonPath("$.id").value(1)) // json 전용 주소, "$" json 내부 접속 기호
           // mock mvc 통해 get 방식으로 위 요청 보내면 200 OK가 올 것 기대
           .andExpect(jsonPath("$.title").value("스프링 강의"))
-          .andExpect(jsonPath("$._link.self").exists()); // HATEOAS 링크는 존재한다
+          .andExpect(jsonPath("$._links.self").exists()); // HATEOAS 링크는 존재한다
 
     }
 
