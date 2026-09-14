@@ -1,0 +1,48 @@
+
+name: ci
+
+# - 트리거: 언제 이 워크플로가 도는가?
+on:
+  push: # 개발할 때는 대부분 push 또는 PR
+    branches: [ "main" ] # main에 push되면
+  pull_request:
+    branches: [ "main" ] # main에 PR이 열리면
+  workflow_dispatch: # 수동 실행 버튼 (Actions 탭에서 직접)
+
+# 각각의 주제별로 job 나눈다
+jobs:
+  # 1. 빌드 + 테스트 (CI의 핵심)
+  build:
+    runs-on: ubuntu-latest # Github가 빌려주는 리눅스 운영체제 러너
+    steps:
+      - name: 코드 체크아웃 # job에서 사용할 수 있는 라이브러리
+        uses: actions/checkout@v7 # 내 github repository에서 코드를 가져오겠다
+
+      - name: JDK 17 설치 # 깃허브 우분투 환경에 자바가 없어 설치 필요
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin # amazon corretto 또한 가능
+          java-version: "17"
+
+      - name: 빌드 + 테스트
+        run: | # 실행 권한, 빌드, gradlew는 .gitignore 면 안 된다
+          chmod +x gradlew
+          ./gradlew build
+        # -x test 제외, 테스트까지 포함시킨다
+
+  # 2. AWS 연동 테스트
+  aws-connection-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: AWS 자격증명 설정 (Github Secrets)
+        # Github에서 ubuntu linux 환경 제공 -> AWS 입장에서는 이 linux가 외부인 아무나 ECR 접근할 수 없다 private해야 한다
+        # 자격증명 미리 세팅하고 이를 통해 AWS 들어갈 수 있게 설정해야 한다
+        # 라이브러리 끌고 온다
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} # id, secret-key 값은 그대로 남기면 안 된다, runtime 할 때 불러와서 적용
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2 # seoul region, secrets에 넣을 수는 있으나 굳이 숨길 필요는 없다
+
+      - name: 연동 확인 (내 계정/역할이 맞는지)
+        run: aws sts get-caller-identity
