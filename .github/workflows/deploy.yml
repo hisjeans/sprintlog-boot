@@ -12,7 +12,7 @@ permissions:
 
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: sprintlog
+  ECR_REPOSITORY: sprintlog-boot
   ECS_CLUSTER: sprintlog-cluster
   ECS_SERVICE: sprintlog-ecs-service
   ECS_TASK_DEFINITION: sprintlog-task
