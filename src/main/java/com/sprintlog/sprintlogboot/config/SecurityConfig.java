@@ -1,0 +1,47 @@
+package com.sprintlog.sprintlogboot.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity // 생략 가능하지만 관례적으로 쓰는 것 관례, 이 클래스가 웹 보안 설정 담당하는 것을 처음 코드를 접한 사람에게 알려주기 위해
+public class SecurityConfig {
+
+  /*
+  SecurityFilterChain - Spring Security의 요청 처리 규칙을 정의하는 빈
+  이 빈이 있으면 Spring boot의 기본 자동 설정 대신 '우리 규칙'이 적용된다
+  */
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        // csrf 나인것처럼 요청 보냈을 때, 쿠키 실어보낼 일 없다, 요청 헤더에 토큰 값 넣어 전달
+        // 세션 쿠키 기반 -> csrf on, 토큰 기반 사용자 정보 유지 -> csrf off
+        // 대부분 REST API 토큰 기반 인증 방식이므로 csrf off, 세션/폼 기반 인증 방식은 csrf on
+        // REST API는 브라우저 세션 폼이 아니라 클라이언트가 직접 요청하므로 지금 단계에서는 CSRF 보호를 끈다 (세션/폼 기반으로 넘어갈 때 다시 다룬다)
+        .csrf(csrf->csrf.disable()) // Customize 인터페이스 구현한 빈 전달 - 클래스 직접 만들지 않고 람다식으로 선언
+
+        // 서버로 들어오는 요청 중 어떤 요청을 허용할 것인가에 대한 설정
+        // 이 안에서 경로별 인증 및 권한 체크 진행 가능
+        .authorizeHttpRequests(auth->auth
+                .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
+        );
+    return http.build();
+  }
+
+
+
+  /*
+  DB에 비밀번호 저장 시 암호화 필요, 비밀번호 암호화 및 암호화 패턴 매칭 기능
+  BCryptPasswordEncoder - 비밀번호를 단방향 해시로 인코딩 / 검증하는 빈
+  평문 저장 금지 원칙을 코드로 실현할 준비물
+  */
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
+}

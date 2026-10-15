@@ -28,6 +28,9 @@ public class User extends BaseEntity {
   // VARCHAR(100) NOT NULL UNIQUE, length를 따로 알려주지 않으면 255로 설정된다, UNIQUE는 얘기하지 않으면 기본값 false
   private String email;
 
+  @Column(length = 100) // 소셜 로그인 시 비밀번호가 없을 수 있으므로 nullable = true로 설정
+  private String password; // 평문 저장 금지, Bcrypt로 해싱한 값
+
   // 연관관계의 주인이 아는 User는 mappedBy 속성을 세팅해준다
   // "owner" 값을 세팅하는 건, 연관관계의 주인 쪽 필드가 User다 라는 것을 얘기해 주는 것
   // 여기에 선언된 활동 리스트는 실제 DB에는 존재하지 않는 데이터, 이건 JPA가 연관관계를 보고 만들어주는 가상의 컬럼
@@ -72,6 +75,14 @@ public class User extends BaseEntity {
   public User(String nickName, String email) {
     this.nickName = nickName;
     this.email = email;
+  }
+
+
+  // 비밀번호까지 전달받는 생성자
+  public User(String nickName, String email, String password) {
+    this.nickName = nickName;
+    this.email = email;
+    this.password=password;
   }
 
 }
