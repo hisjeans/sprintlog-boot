@@ -1,5 +1,7 @@
 package com.sprintlog.sprintlogboot.config;
 
+import com.sprintlog.sprintlogboot.filter.RequestIdFilter;
+import com.sprintlog.sprintlogboot.filter.RequestLoggingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -7,9 +9,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableWebSecurity // 생략 가능하지만 관례적으로 쓰는 것 관례, 이 클래스가 웹 보안 설정 담당하는 것을 처음 코드를 접한 사람에게 알려주기 위해
+@EnableWebSecurity // Spring Boot 자동 설정으로 생략 가능한 경우도 있지만 쓰는 것 관례, 웹 보안 설정 클래스임을 명확하게 나타내기 위해 명시
 public class SecurityConfig {
 
   /*
@@ -29,7 +32,12 @@ public class SecurityConfig {
         // 이 안에서 경로별 인증 및 권한 체크 진행 가능
         .authorizeHttpRequests(auth->auth
                 .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
-        );
+        )
+        .addFilterBefore(new RequestIdFilter(), UsernamePasswordAuthenticationFilter.class)
+        // RequestLoggingFilter 객체를 생성해 필터로 추가할텐데 UsernamePasswordAuthenticationFilter 전에 끼워넣겠다
+        // 로그인 필터 처리 전 앞 쪽에 끼워넣었다 생각
+        // RequestLoggingFilter 전부 요청 기록하기 위해 만든 것, 인증 전 로깅 먼저
+        .addFilterAfter(new RequestLoggingFilter(), RequestIdFilter.class);
     return http.build();
   }
 
