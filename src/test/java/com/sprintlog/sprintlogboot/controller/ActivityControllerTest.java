@@ -123,7 +123,7 @@ class ActivityControllerTest {
     @Test
     @DisplayName("data 만 보내도 201 + Location (file 은 선택)")
     void 정상이면_201() throws Exception {
-      given(service.create(any(), any())).willReturn(sample);
+      given(service.create(any(), any(), authentication.getName())).willReturn(sample);
 
       // 가짜 multiPartFile - required=false - 필요하지 않으면 안 보낼 수 있다, 파일 보내지 않아도 정상 등록되는지 확인해볼 것
       MockMultipartFile data = new MockMultipartFile("data", "data.json",
@@ -144,7 +144,7 @@ class ActivityControllerTest {
     @Test
     @DisplayName("data + file 이면 201, 파일은 FileService로 저장된다.")
     void 파일첨부_201() throws Exception {
-      given(service.create(any(), any())).willReturn(sample);
+      given(service.create(any(), any(), authentication.getName())).willReturn(sample);
       given(fileService.saveFile(any())).willReturn("saved-uuid.png"); // 저장했다 치고 파일명 반환(가짜)
 
       // 가짜 multiPartFile - required=false - 필요하지 않으면 안 보낼 수 있다, 파일 보내지 않아도 정상 등록되는지 확인해볼 것
@@ -186,7 +186,7 @@ class ActivityControllerTest {
           .andExpect(jsonPath("$.code").value("C001"))
           .andExpect(jsonPath("$.errors").exists());
 
-      verify(service, never()).create(any(), any());   // 검증에서 막혀서 서비스까지 못 간다
+      verify(service, never()).create(any(), any(), authentication.getName());   // 검증에서 막혀서 서비스까지 못 간다
     }
   }
 

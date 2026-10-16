@@ -5,6 +5,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.BDDMockito.*;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
+import com.sprintlog.sprintlogboot.repository.UserRepository;
 import com.sprintlog.sprintlogboot.domain.Visibility;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
@@ -196,12 +197,12 @@ class ActivityServiceTest {
 
       // willReturn 은 리턴할 객체를 직접 명시해 주어야 한다
       // create()를 테스트할 때는 이 테스트 메서드 안에 리턴해줄 Entity가 없다
-//      given(repository.save(any(LearningActivity.class))).willReturn(???);
+      // given(repository.save(any(LearningActivity.class))).willReturn(???);
       // 서비스가 repository의 save를 호출하면 호출한 시점에 전달받은 그 인자(엔터티)를 그대로 돌려주어라 -> willAnswer
       given(repository.save(any(LearningActivity.class))).willAnswer(inv->inv.getArgument(0)); // save 메서드 호출될 때 리턴되는 첫 번째 인자값 돌려줄 것
 
       // when
-      service.create(request, null); // 이미지 저장 안 되면 null로 저장
+      service.create(request, null, authentication.getName()); // 이미지 저장 안 되면 null로 저장
       ArgumentCaptor<LearningActivity> captor = ArgumentCaptor.forClass(LearningActivity.class); // 매개값을 captor
 
       // then

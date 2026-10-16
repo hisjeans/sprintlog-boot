@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -90,7 +91,10 @@ public interface ActivityControllerDocs {
     @PostMapping // 요청 post
     public ResponseEntity<EntityModel<ActivityResponse>> create(
         @Valid @RequestPart("data") CreateActivityRequest request,
-        @RequestPart(value = "file", required = false) MultipartFile file);
+        @RequestPart(value = "file", required = false) MultipartFile file,
+        // 첨부파일 여러 개 받아야 한다면 list로 받는다
+        Authentication authentication); // security context에서 꺼낸 로직을 직접 작성할 필요 없도록 스프링이 제공하는 Authentication 객체를 사용, 로그인한 사용자 정보 꺼내기 위해 사용
+        // authentication null 일리 없다 - 사전에 로그인 안 한 상태라면 이 단계에서 막히기 때문에
 
 
     // 활동 수정, 자원 식별은 Path(/{id}) - 수정할 때는 어떤 객체를 변경할 것인지 지목해줘야 하기 때문

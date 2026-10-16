@@ -11,7 +11,6 @@ import com.sprintlog.sprintlogboot.dto.response.SliceResponse;
 import com.sprintlog.sprintlogboot.exception.ActivityArchiveException;
 import com.sprintlog.sprintlogboot.service.ActivityDashboard;
 import com.sprintlog.sprintlogboot.service.ActivityService;
-import com.sprintlog.sprintlogboot.service.FileService;
 import com.sprintlog.sprintlogboot.service.FileStorage;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -22,6 +21,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -120,7 +120,10 @@ public class ActivityController implements ActivityControllerDocs {
     @PostMapping // 요청 post
     public ResponseEntity<EntityModel<ActivityResponse>> create(
         @Valid @RequestPart("data") CreateActivityRequest request,
-        @RequestPart(value = "file", required = false) MultipartFile file // 첨부파일 여러 개 받아야 한다면 list로 받는다
+        @RequestPart(value = "file", required = false) MultipartFile file, // 첨부파일 여러 개 받아야 한다면 list로 받는다
+        Authentication authentication // 클라이언트가 보내는 것 X, SecurityContextHolder에서 전달된 사용자 인증 정보
+        // security context에서 꺼낸 로직을 직접 작성할 필요 없도록 스프링이 제공하는 Authentication 객체를 사용, 로그인한 사용자 정보 꺼내기 위해 사용
+        // authentication null 일리 없다 - 사전에 로그인 안 한 상태라면 이 단계에서 막히기 때문에
     ){ // @Valid 없으면 CreateActivityController 안에 있는 유효성 검증 동작하지 않는다
         // client는 react로 이루어져 있어 그대로 전달하지 않고 JSON 형태로 전달, createActivityRequest 형태 전달하고 싶은데 변환할 수 있을까
         // Java->Json @ResponseBody
@@ -132,7 +135,7 @@ public class ActivityController implements ActivityControllerDocs {
             savedFileName = fileService.saveFile(file);
         } // 데이터베이스에는 파일명 저장
 
-        LearningActivity saved = activityService.create(request, savedFileName);// 컨트롤러가 DTO를 Entity로 바꾸지 않도록 한다
+        LearningActivity saved = activityService.create(request, savedFileName, authentication.getName());// 컨트롤러가 DTO를 Entity로 바꾸지 않도록 한다
 
         // 성공 시 201 Created + Location 헤더(생성된 자원의 주소)를 함께 응답
         URI location = URI.create("/api/activities/" + saved.getId()); // 기존과 달리 데이터가 insert될 때, 자동으로 아이디 세팅되기 때문에 변경

@@ -1,21 +1,32 @@
 package com.sprintlog.sprintlogboot.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import com.sprintlog.sprintlogboot.filter.RequestIdFilter;
 import com.sprintlog.sprintlogboot.filter.RequestLoggingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity // Spring Boot 자동 설정으로 생략 가능한 경우도 있지만 쓰는 것 관례, 웹 보안 설정 클래스임을 명확하게 나타내기 위해 명시
+@EnableMethodSecurity // 있어야 서비스의 @PreAuthorize가 동작한다
 public class SecurityConfig {
 
   /*
@@ -23,7 +34,12 @@ public class SecurityConfig {
   이 빈이 있으면 Spring boot의 기본 자동 설정 대신 '우리 규칙'이 적용된다
   */
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain securityFilterChain(HttpSecurity http,
+      // AuthenticationEntryPoint, AccessDeniedHandler는 밑에 빈 등록 로직이 작성되어 있으므로,
+      // securityFilterChain이 호출될 때 등록된 빈이 전달되도록 세팅
+      AuthenticationEntryPoint restAuthenticationEntryPoint,
+      AccessDeniedHandler restAccessDeniedHandler
+      ) throws Exception {
     http
         // csrf 나인것처럼 요청 보냈을 때, 쿠키 실어보낼 일 없다, 요청 헤더에 토큰 값 넣어 전달
         // 세션 쿠키 기반 -> csrf on, 토큰 기반 사용자 정보 유지 -> csrf off
@@ -40,8 +56,17 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/me/**").hasRole("USER")
                 // ActivityController가 @RequestMapping({"api/v1/activities","/api/activities"}) 선언되어 있어 두 경로 모두 허용
                 // 사전에 로그인된 것만 허용
+                .requestMatchers(HttpMethod.POST, "/api/v1/activities/**", "/api/activities/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/activities/**", "/api/activities/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/activities/**", "/api/activities/**").authenticated()
+                //.authenticated() // 모든 요청은 인증된 사용자만 접근 가능, 로그인 안 한 상태라면 무조건 이 단계에서 막힌다
                 .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
         )
+        // 필터 단에서 발생한 커스텀 예외 처리 등록
+        .exceptionHandling(ex-> ex
+                .authenticationEntryPoint(restAuthenticationEntryPoint)
+                .accessDeniedHandler(restAccessDeniedHandler)
+            ) // 익명 객체 이용해 등록, customizer 인터페이스 구현한 익명 객체 방식으로 전달
         // Customize 인터페이스 구현한 객체 전달 - 추상 메서드 1, 즉석 람다식으로 전달 가능
         .httpBasic(Customizer.withDefaults())
         .addFilterBefore(new RequestIdFilter(), UsernamePasswordAuthenticationFilter.class)
@@ -76,5 +101,33 @@ public class SecurityConfig {
     return RoleHierarchyImpl.withDefaultRolePrefix()
         .role("ADMIN").implies("USER")
         .build();
+  }
+
+  // 미인증(401) 응답을 ProblemDetail JSON으로 커스텀할 수 있는 객체
+  @Bean
+  AuthenticationEntryPoint restAuthenticationEntryPoint(ObjectMapper objectMapper) {
+    return (request, response, authException)->
+        writeProblem(objectMapper, response, HttpStatus.UNAUTHORIZED, "AUTH_401", "인증이 필요합니다. 로그인 후 다시 시도하세요.");
+  }
+
+
+  // 권한 부족(403) 응답을 ProblemDetail JSON으로 커스텀할 수 있는 객체
+  @Bean
+  AccessDeniedHandler restAccessDeniedHandler(ObjectMapper objectMapper) {
+    return (request, response, deniedException)->
+        writeProblem(objectMapper, response, HttpStatus.FORBIDDEN, "AUTH_403", "이 작업을 수행할 권한이 없습니다.");
+
+  }
+
+
+  /** 401/403 공통 — ProblemDetail 을 JㅁSON 으로 직접 응답 본문에 쓴다. */
+  private static void writeProblem(ObjectMapper objectMapper, HttpServletResponse response,
+      HttpStatus status, String code, String detail) throws IOException {
+    ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, detail);
+    pd.setProperty("code", code);
+    response.setStatus(status.value());
+    response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+    response.setCharacterEncoding("UTF-8");
+    objectMapper.writeValue(response.getWriter(), pd);
   }
 }
