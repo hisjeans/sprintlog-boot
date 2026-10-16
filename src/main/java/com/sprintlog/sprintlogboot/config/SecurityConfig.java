@@ -4,6 +4,8 @@ import com.sprintlog.sprintlogboot.filter.RequestIdFilter;
 import com.sprintlog.sprintlogboot.filter.RequestLoggingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -32,6 +34,12 @@ public class SecurityConfig {
         // 서버로 들어오는 요청 중 어떤 요청을 허용할 것인가에 대한 설정
         // 이 안에서 경로별 인증 및 권한 체크 진행 가능
         .authorizeHttpRequests(auth->auth
+                // "**": /api/v1/admin/user(admin 뒤에 경로 하나), /api/v1/admin/temp/board(admin 하위 경로 두 칸) 하위 경로 몇 칸이든 가능
+                // "*": 하위 경로 하나 허용
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/me/**").hasRole("USER")
+                // ActivityController가 @RequestMapping({"api/v1/activities","/api/activities"}) 선언되어 있어 두 경로 모두 허용
+                // 사전에 로그인된 것만 허용
                 .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
         )
         // Customize 인터페이스 구현한 객체 전달 - 추상 메서드 1, 즉석 람다식으로 전달 가능
@@ -54,5 +62,19 @@ public class SecurityConfig {
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
+  }
+
+  /*
+  static인 이유: 이 계층 빈은 보안 인프라가 초기화되는 설정 단계에 확실히 잡혀야 한다
+  권한 계층 설정은 static으로 선언하면 다른 빈의 조기 초기화 부작용 없이 이를 보장받을 수 있다
+  다른 빈이 먼저 초기화되어 이 계층이 설정되는 것을 방지
+  static initializer 정적 초기화, role 권한 계층부터 먼저 세팅되고 나서 나머지 계층 선언
+  나중에 컨트롤러에 @PreAuthorize(메서드 보안) 도입 시 static을 붙이지 않으면 동작하지 않는 사례가 있다
+  */
+  @Bean
+  static RoleHierarchy roleHierarchy() {
+    return RoleHierarchyImpl.withDefaultRolePrefix()
+        .role("ADMIN").implies("USER")
+        .build();
   }
 }

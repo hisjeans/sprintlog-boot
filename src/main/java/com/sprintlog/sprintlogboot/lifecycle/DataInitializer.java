@@ -3,6 +3,7 @@ package com.sprintlog.sprintlogboot.lifecycle;
 import com.sprintlog.sprintlogboot.config.SprintLogProperties;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
+import com.sprintlog.sprintlogboot.domain.Role;
 import com.sprintlog.sprintlogboot.domain.User;
 import com.sprintlog.sprintlogboot.domain.Visibility;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
@@ -49,6 +50,9 @@ public class DataInitializer {
         log.info("[lifecycle] @PostConstruct — DataInitializer 가 샘플 데이터를 적재합니다.");
 
         if (userRepository.count() == 0) {
+
+            User admin = new User("관리자", "admin@sprintlog.com", passwordEncoder.encode("admin123"), Role.ADMIN);
+            userRepository.save(admin);
 
             User choon = new User("김춘식", "choon@naver.com", passwordEncoder.encode("password123"));
             // 비밀번호는 평문으로 저장되면 로그인 바로 실패, security는 기본적으로 암호화된 비밀번호 요구
