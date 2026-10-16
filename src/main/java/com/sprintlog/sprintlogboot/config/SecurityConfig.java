@@ -4,6 +4,7 @@ import com.sprintlog.sprintlogboot.filter.RequestIdFilter;
 import com.sprintlog.sprintlogboot.filter.RequestLoggingFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -33,6 +34,8 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth->auth
                 .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
         )
+        // Customize 인터페이스 구현한 객체 전달 - 추상 메서드 1, 즉석 람다식으로 전달 가능
+        .httpBasic(Customizer.withDefaults())
         .addFilterBefore(new RequestIdFilter(), UsernamePasswordAuthenticationFilter.class)
         // RequestLoggingFilter 객체를 생성해 필터로 추가할텐데 UsernamePasswordAuthenticationFilter 전에 끼워넣겠다
         // 로그인 필터 처리 전 앞 쪽에 끼워넣었다 생각

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.ArrayList;
@@ -22,7 +24,7 @@ public class User extends BaseEntity {
 
   // @Column 속성으로 컬럼 제약 포현(null 가능 여부, 길이)
   @Column(nullable = false, length = 50) // NOT NULL
-  private String nickName;
+  private String nickname;
 
   @Column(nullable = false, unique = true, length = 100)
   // VARCHAR(100) NOT NULL UNIQUE, length를 따로 알려주지 않으면 255로 설정된다, UNIQUE는 얘기하지 않으면 기본값 false
@@ -30,6 +32,10 @@ public class User extends BaseEntity {
 
   @Column(length = 100) // 소셜 로그인 시 비밀번호가 없을 수 있으므로 nullable = true로 설정
   private String password; // 평문 저장 금지, Bcrypt로 해싱한 값
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 20)
+  private Role role=Role.USER; // Common 또한 가능, 일반 사용자 권한
 
   // 연관관계의 주인이 아는 User는 mappedBy 속성을 세팅해준다
   // "owner" 값을 세팅하는 건, 연관관계의 주인 쪽 필드가 User다 라는 것을 얘기해 주는 것
@@ -72,15 +78,15 @@ public class User extends BaseEntity {
   protected User() {}
 
   // 우리가 실제로 사용하는 생성자
-  public User(String nickName, String email) {
-    this.nickName = nickName;
+  public User(String nickname, String email) {
+    this.nickname = nickname;
     this.email = email;
   }
 
 
   // 비밀번호까지 전달받는 생성자
-  public User(String nickName, String email, String password) {
-    this.nickName = nickName;
+  public User(String nickname, String email, String password) {
+    this.nickname = nickname;
     this.email = email;
     this.password=password;
   }
