@@ -9,6 +9,9 @@ import com.sprintlog.sprintlogboot.domain.Visibility;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.repository.AuditLogRepository;
+import com.sprintlog.sprintlogboot.domain.User;
+import com.sprintlog.sprintlogboot.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,10 +35,20 @@ public class ActivityServiceIntegrationTest {
   @Autowired
   AuditLogRepository auditLogRepository;
 
+  @Autowired
+  UserRepository userRepository;
+
+  @Autowired
+  PasswordEncoder passwordEncoder;
+
+
   @BeforeEach
   void clean() {
     activityRepository.deleteAll();
     auditLogRepository.deleteAll();
+    userRepository.deleteAll();
+    // create의 소유자로 쓸 사용자
+    userRepository.save(new User("김춘식", "choon@naver.com", passwordEncoder.encode("password123")));
   }
 
   @Test
@@ -44,7 +57,7 @@ public class ActivityServiceIntegrationTest {
     // create(request, savedFileName) — 파일 없으면 두 번째 인자 null.
     LearningActivity saved = service.create(new CreateActivityRequest(
         ActivityCategory.LECTURE, "통합 테스트 강의", 60, Visibility.PUBLIC,
-        null, null, "이강사", null, null), null, authentication.getName());
+        null, null, "이강사", null, null), null, "choon@naver.com");
     // 통합 테스트는 진짜 DB에 접근하기 때문에 user 정보 존재해야 한다 - BeforeEach user 정보 생성
 
 

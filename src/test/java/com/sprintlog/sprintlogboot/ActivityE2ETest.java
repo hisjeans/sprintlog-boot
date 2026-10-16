@@ -3,6 +3,7 @@ package com.sprintlog.sprintlogboot;
 import static org.assertj.core.api.Assertions.*;
 
 import com.jayway.jsonpath.JsonPath;
+import com.sprintlog.sprintlogboot.domain.User;
 import com.sprintlog.sprintlogboot.repository.ActivityRepository;
 import com.sprintlog.sprintlogboot.repository.AuditLogRepository;
 import com.sprintlog.sprintlogboot.repository.UserRepository;
@@ -15,8 +16,6 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.UUID;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -33,6 +32,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -57,6 +57,9 @@ public class ActivityE2ETest {
   @Autowired
   UserRepository userRepository;
 
+  @Autowired
+  PasswordEncoder passwordEncoder;
+
   private String base; // 공통 기본 url 담아놓을 용도
 
   // build 폴더 아래에 폴더를 세팅하면 gitignore 대상이고, gradle clean할 때 알아서 지워준다
@@ -67,6 +70,8 @@ public class ActivityE2ETest {
     auditLogRepository.deleteAll();
     activityRepository.deleteAll();
     userRepository.deleteAll(); // 샘플 데이터를 비워 시작 상태를 일정하게 
+    userRepository.save(new User("김춘식", "choon@naver.com", passwordEncoder.encode("password123")));
+
     base = "http://localhost:" + port + "/api/v1/activities";
 
     // 매 테스트마다 업로드 폴더를 비운다, 앞의 테스트가 뒤의 테스트에 영향을 주면 안 되기 때문
@@ -126,7 +131,8 @@ public class ActivityE2ETest {
 
    // TestRestTemplate에게 POST 요청을 보내라고 명령
    // postForEntity(요청 보낼 url, 헤더와 바디 정보를 담은 HttpEntity, 응답 본문을 어떤 타입으로 받을 지)
-    return rest.postForEntity(base, new HttpEntity<>(parts, headers), String.class);
+    return rest.withBasicAuth("choon@naver.com", "password123") // 인증정보와 함께 post 요청 보낸다
+        .postForEntity(base, new HttpEntity<>(parts, headers), String.class);
   }
 
   // data와 file까지 받아서 멀티파트 포장
@@ -146,7 +152,8 @@ public class ActivityE2ETest {
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.MULTIPART_FORM_DATA); // 전체 요청은 multipart/form-data 요청
 
-    return rest.postForEntity(base, new HttpEntity<>(parts, headers), String.class);
+    return rest.withBasicAuth("choon@naver.com", "password123") // 인증 정보도 함께 보내줘야 한다
+        .postForEntity(base, new HttpEntity<>(parts, headers), String.class);
   }
 
 
@@ -247,7 +254,8 @@ public class ActivityE2ETest {
     String one = base + "/" + id;
 
     // 2) 수정(PUT, JSON) → 200. postForEntity 처럼 지름길이 없어 exchange(HttpMethod.PUT, ...) 로 보낸다.
-    ResponseEntity<String> updated = rest.exchange(one, HttpMethod.PUT, // 전송방식 직접 보낸다, exchange 메서드 - 만능, POST, GET... 보낼 수 있다
+    ResponseEntity<String> updated = rest.withBasicAuth("choon@naver.com", "password123")
+        .exchange(one, HttpMethod.PUT, // 전송방식 직접 보낸다, exchange 메서드 - 만능, POST, GET... 보낼 수 있다
         json("{\"title\":\"바뀐 제목\",\"visibility\":\"PRIVATE\"}"), String.class);
     assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat((String) JsonPath.read(updated.getBody(), "$.title")).isEqualTo("바뀐 제목");
@@ -257,7 +265,8 @@ public class ActivityE2ETest {
         .isEqualTo("바뀐 제목");
 
     // 4) 삭제(DELETE) → 204(본문 없음)
-    ResponseEntity<Void> deleted = rest.exchange(one, HttpMethod.DELETE, null, Void.class); // delete는 리턴되는 것이 없고 요청과 함께 전달되는 데이터 없기 때문에 Void class
+    ResponseEntity<Void> deleted = rest.withBasicAuth("choon@naver.com", "password123")
+        .exchange(one, HttpMethod.DELETE, null, Void.class); // delete는 리턴되는 것이 없고 요청과 함께 전달되는 데이터 없기 때문에 Void class
     assertThat(deleted.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
     // 5) 다시 조회 → 이제 없다(404). 삭제까지 전 계층으로 이어져 반영됨.

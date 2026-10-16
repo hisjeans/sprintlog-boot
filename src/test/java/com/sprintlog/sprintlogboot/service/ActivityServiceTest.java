@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.*;
 import com.sprintlog.sprintlogboot.domain.ActivityCategory;
 import com.sprintlog.sprintlogboot.domain.LearningActivity;
 import com.sprintlog.sprintlogboot.repository.UserRepository;
+import com.sprintlog.sprintlogboot.domain.User;
 import com.sprintlog.sprintlogboot.domain.Visibility;
 import com.sprintlog.sprintlogboot.dto.request.CreateActivityRequest;
 import com.sprintlog.sprintlogboot.dto.request.UpdateActivityRequest;
@@ -35,6 +36,8 @@ class ActivityServiceTest {
   ActivityRepository repository;
   @Mock AuditLogRepository auditLogRepository;
   @Mock AuditService auditService;
+  @Mock
+  UserRepository userRepository; // create가 소유자(현재 사용자)를 조회하므로 UserRepository도 가짜로 채운다
   // FileStorage 가 없어 null pointer exception 발생했다
   @Mock FileStorage fileStorage;
 
@@ -202,7 +205,10 @@ class ActivityServiceTest {
       given(repository.save(any(LearningActivity.class))).willAnswer(inv->inv.getArgument(0)); // save 메서드 호출될 때 리턴되는 첫 번째 인자값 돌려줄 것
 
       // when
-      service.create(request, null, authentication.getName()); // 이미지 저장 안 되면 null로 저장
+      given(userRepository.findByEmail("choon@naver.com"))
+          .willReturn(Optional.of(new User("김춘식", "choon@naver.com", "hashed")));
+
+      service.create(request, null, "choon@naver.com"); // 이미지 저장 안 되면 null로 저장
       ArgumentCaptor<LearningActivity> captor = ArgumentCaptor.forClass(LearningActivity.class); // 매개값을 captor
 
       // then
@@ -214,6 +220,7 @@ class ActivityServiceTest {
       assertThat(saved.getCategory()).isEqualTo(ActivityCategory.LECTURE); // request.title() 로 비교해도 된다
       assertThat(saved.getMinutes()).isEqualTo(45);
       assertThat(saved.getInstructorName()).isEqualTo("이 강사");
+      assertThat(saved.getOwner().getEmail()).isEqualTo("choon@naver.com");
     } // 테스트는 DTO 통해 생성되고 있다 -> save 되는 첫 번째 매개값을 돌려주고(willAnswer-ArgumentCaptor) 값 일치하는지 확인
   }
 
