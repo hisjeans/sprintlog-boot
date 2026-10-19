@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -79,6 +80,12 @@ public class SecurityConfig {
                 .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
         )
         // 필터 단에서 발생한 커스텀 예외 처리 등록
+        .sessionManagement(session->session
+            //.sessionCreationPolicy(SessionCreationPolicy.STATELESS)// jwt는 세션 사용하지 않는다
+            .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // 로그인 성공하면 세션 필요
+            .invalidSessionUrl("/login.html?expired")
+        ) // 커스텀하는 인터페이스 기반 익명 객체 생성
+
         .exceptionHandling(ex-> ex
                 .authenticationEntryPoint(restAuthenticationEntryPoint)
                 .accessDeniedHandler(restAccessDeniedHandler)
