@@ -66,6 +66,7 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth->auth
                 // "**": /api/v1/admin/user(admin 뒤에 경로 하나), /api/v1/admin/temp/board(admin 하위 경로 두 칸) 하위 경로 몇 칸이든 가능
                 // "*": 하위 경로 하나 허용
+                .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll() // 원래는 전체를 잠그고 허용할 몇 가지 방식만 열어주는 것이 보안상 안전하지만, 현재는 예외적으로 허용
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/me/**").hasRole("USER")
                 // ActivityController가 @RequestMapping({"api/v1/activities","/api/activities"}) 선언되어 있어 두 경로 모두 허용

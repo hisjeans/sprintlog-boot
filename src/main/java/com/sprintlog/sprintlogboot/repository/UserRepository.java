@@ -11,5 +11,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
   Optional<User> findByEmail(String email); // 이메일로 유저 조회, Optional은 null 처리 편하게 해주는 객체
 
+  boolean existsByEmail(String email); // 이 이메일을 가진 사용자가 존재하는지 여부만 간단히 조회, 쿼리 메서드로 작성
+
 }
 // 현재 findById로 회원 찾을 수 없다 사용자 가입할 때 이메일로 가입하기 때문에 findByEmail
