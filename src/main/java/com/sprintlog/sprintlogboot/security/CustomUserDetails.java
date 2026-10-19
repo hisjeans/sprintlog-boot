@@ -64,4 +64,25 @@ public class CustomUserDetails implements UserDetails {
     return UserDetails.super.isEnabled();
   }
 
+  /*
+  크롬 로그인: User 객체 A (ID: user, 주소: 0x10) 가정
+  사파리 로그인: User 객체 B(ID: user, 주소: 0x20) 가정
+  같은 클래스 기반으로 객체 생성되면 값은 동일하더라도 주소값이 다르다
+  주소가 다르면 동시성 세션 관리하는 매니저가 다른 객체로 인식해서 동시성을 막지 못한다
+  - equals()를 재정의하지 않으면 자바는 주소값으로 비교한다 ID가 같더라도 주소가 다르기 때문에 서로 다른 계정으로 인식한다
+  - 아이디(이메일)이 같으면 같은 계정으로 인식하도록 해주어야 한다
+ */
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof CustomUserDetails that)) { // CustomUserDetails로 변환할 수 없으면 비교할 가치 없다
+      return false;
+    }
+    return user.getEmail().equals(that.user.getEmail());
+  }
+
+  @Override
+  public int hashCode() {
+    return user.getEmail().hashCode();
+  }
 }

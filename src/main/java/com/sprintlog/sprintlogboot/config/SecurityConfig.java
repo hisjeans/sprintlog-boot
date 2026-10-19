@@ -84,6 +84,21 @@ public class SecurityConfig {
             //.sessionCreationPolicy(SessionCreationPolicy.STATELESS)// jwt는 세션 사용하지 않는다
             .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // 로그인 성공하면 세션 필요
             .invalidSessionUrl("/login.html?expired")
+            // 세션 ID만 변경하고 세션 객체는 그대로 유지, 보통 많이 사용하는 것
+            // 예전 세션으로 로그인하면 새로운 세션으로 로그인 진행된다
+            .sessionFixation(fixation->fixation.changeSessionId())
+//            .sessionFixation(fixation->fixation.migrateSession()) // 새 세션을 생성해 기존 세션의 모든 속성을 복사한 뒤 기존 세션을 무효화
+//            .sessionFixation(fixation->fixation.newSession()) // 새 세션을 생성, 기존 데이터는 유지되지 않음
+//            .sessionFixation(fixation->fixation.none()) // 사용하지 말 것, 아무것도 하지 않는다
+
+            // 동시성 관련 설정은 이 블록 안에서 작성한다
+                .sessionConcurrency(concurrency->concurrency
+                    .maximumSessions(1) // 한 사용자 당 최대 세션 수, 1개로 제한했다=동시 로그인 절대 불가능하게 하겠다는 의미
+                    .maxSessionsPreventsLogin(false) // false: 새 로그인 시 이전 세션 만료, true: 이미 로그인 되어 있다면 새 로그인 차단
+                    .expiredUrl("/login.html?expired") // 동시성 세션 안에서 만료된 세션(이전 세션) 어디로 보낼지
+                    // .invalidSession: 진짜 세션 만료되었을 때 설정 != expiredUrl: 동시 요청 만료된 세션, 이전 세션이 만료되었을 때 설정
+                    // 경로가 같다고 해서 같은 의미가 아니다, expiredUrl은 동시성 세션 만료 시 이동할 경로, invalidSessionUrl은 진짜 세션 만료 시 이동할 경로
+                )
         ) // 커스텀하는 인터페이스 기반 익명 객체 생성
 
         .exceptionHandling(ex-> ex
