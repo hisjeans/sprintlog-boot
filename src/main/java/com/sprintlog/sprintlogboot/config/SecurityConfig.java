@@ -1,5 +1,9 @@
 package com.sprintlog.sprintlogboot.config;
 
+import java.util.List;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -46,6 +50,16 @@ public class SecurityConfig {
         // 대부분 REST API 토큰 기반 인증 방식이므로 csrf off, 세션/폼 기반 인증 방식은 csrf on
         // REST API는 브라우저 세션 폼이 아니라 클라이언트가 직접 요청하므로 지금 단계에서는 CSRF 보호를 끈다 (세션/폼 기반으로 넘어갈 때 다시 다룬다)
         .csrf(csrf->csrf.disable()) // Customize 인터페이스 구현한 빈 전달 - 클래스 직접 만들지 않고 람다식으로 선언
+
+        // CORS (교차 출처 자원 공유) 다른 출처의 브라우저 요청을 허용
+        // Customizer.withDefaults(): 등록된 빈 중 CorsConfigurationSource 타입의 빈이 있다면 기본 적용하겠다 
+        .cors(Customizer.withDefaults())
+
+        // XSS 방어를 돕는 보안 응답 헤더 - Content-Security-Policy
+        // default-src 'self' = 기본적으로 같은 출처의 리소스만 로드 허용 -> 외부 악성 스크립트 주입 완화
+        .headers(headers -> headers // 익명 객체로 전달
+            .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
+        )
 
         // 서버로 들어오는 요청 중 어떤 요청을 허용할 것인가에 대한 설정
         // 이 안에서 경로별 인증 및 권한 체크 진행 가능
@@ -129,5 +143,22 @@ public class SecurityConfig {
     response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
     response.setCharacterEncoding("UTF-8");
     objectMapper.writeValue(response.getWriter(), pd);
+  }
+
+  @Bean
+  CorsConfigurationSource corsConfigurationSource(){
+    CorsConfiguration config=new CorsConfiguration();
+    // 허용할 출처(운영에서는 실제 프론트 도메인 주소가 들어간다)
+    config.setAllowedOrigins(List.of("http://localhost:63342", "http://localhost:3000")); // 허용할 출처 설정
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // CORS 정책 걸리지 않게 할 요청 방식
+    // OPTIONS 브라우저 쪽 설정
+    config.setAllowedHeaders(List.of("*")); // 전부 허용
+    config.setAllowCredentials(true); // 쿠키 허용, 자격 증명
+
+    // 위에서 만든 규칙을 모든 URL 경로에 적용
+    UrlBasedCorsConfigurationSource source=new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+
+    return source;
   }
 }
