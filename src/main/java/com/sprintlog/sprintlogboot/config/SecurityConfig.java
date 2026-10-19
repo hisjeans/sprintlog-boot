@@ -14,6 +14,11 @@ import com.sprintlog.sprintlogboot.filter.RequestIdFilter;
 import com.sprintlog.sprintlogboot.filter.RequestLoggingFilter;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
+import com.sprintlog.sprintlogboot.security.LoginFailureHandler;
+import com.sprintlog.sprintlogboot.security.LoginSuccessHandler;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -48,7 +53,9 @@ public class SecurityConfig {
       AuthenticationEntryPoint restAuthenticationEntryPoint,
       AccessDeniedHandler restAccessDeniedHandler,
       PersistentTokenRepository persistentTokenRepository,
-      UserDetailsService userDetailsService
+      UserDetailsService userDetailsService,
+      AuthenticationSuccessHandler loginSuccessHandler,
+      AuthenticationFailureHandler loginFailureHandler
       ) throws Exception {
     http
         // csrf 나인것처럼 요청 보냈을 때, 쿠키 실어보낼 일 없다, 요청 헤더에 토큰 값 넣어 전달
@@ -80,6 +87,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/activities/**", "/api/activities/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/activities/**", "/api/activities/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/activities/**", "/api/activities/**").authenticated()
+                .requestMatchers("api/v1/auth/me").authenticated()
                 //.authenticated() // 모든 요청은 인증된 사용자만 접근 가능, 로그인 안 한 상태라면 무조건 이 단계에서 막힌다
                 .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
         )
@@ -119,9 +127,9 @@ public class SecurityConfig {
         // 한 번 로그인하면 서버가 세션을 만들고 JSESSIONID 쿠키를 발급한다
         // 그 이후의 요청은 그 쿠키만으로 인증 유지된다 - 상태 유지(stateful) 방식
         .formLogin(form->form
-            .loginPage("/login.html") // 우리가 만들 로그인 페이지
             .loginProcessingUrl("/login") // 로그인 처리되는 url, 폼이 POST 처리되는 URL(Spring이 가로챈다, 우리가 직접 만들지 않는다)
-            .defaultSuccessUrl("/api/v1/auth/whoami", true) // 로그인 성공 시 이동할 url, 보통 메인 페이지, 현재는 없으므로 다른 url 지정
+            .successHandler(loginSuccessHandler)
+            .failureHandler(loginFailureHandler)
             .permitAll() // 로그인 요청을 누구나 접근 가능, 로그인은 인증 받지 않은 사람들이 들어오는 곳이기 때문
         ) // 람다식 익명 객체 설정
         .rememberMe(remember->remember
@@ -135,7 +143,7 @@ public class SecurityConfig {
 
         .logout(logout->logout
             .logoutUrl("/logout") // Spring Security가 알아서 인식, POST /logout 으로 로그아웃
-            .logoutSuccessUrl("/login.html?logout") // 로그아웃 성공하면 보통 메인 페이지 이동, 현재는 없으니 간단한 정보만 남긴다, 로그아웃 완료 후 이동
+            .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)) // 204, 참고 로그아웃 핸들러는 FailureHandler 없다
             .invalidateHttpSession(true) // 세션 무효화(기본값이지만 명시 선호)
             .deleteCookies("JSESSIONID", "remember-me") // 세션 쿠키 삭제, 자동 로그인 쿠키도 삭제
         ) // 사용자의 정보를 서버가 영원히 유지할 수 없다, 사용자가 원할 때는 연결 끊어줄 수 있어야 한다
@@ -226,4 +234,15 @@ public class SecurityConfig {
 
     return source;
   }
+
+  @Bean
+  AuthenticationSuccessHandler loginSuccessHandler(ObjectMapper objectMapper) {
+    return new LoginSuccessHandler(objectMapper);
+  }
+
+  @Bean
+  AuthenticationFailureHandler loginFailureHandler(ObjectMapper objectMapper) {
+    return new LoginFailureHandler(objectMapper);
+  }
+
 }

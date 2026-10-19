@@ -1,5 +1,8 @@
 package com.sprintlog.sprintlogboot.controller;
 
+import com.sprintlog.sprintlogboot.dto.response.UserResponse;
+import com.sprintlog.sprintlogboot.security.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import java.util.Map;
 import java.util.List;
 import org.springframework.security.core.Authentication;
@@ -35,5 +38,11 @@ public class AuthController {
         "authenticationType", authentication.getClass().getSimpleName()
     );
   }
+
+
+  @GetMapping("/me")
+  public UserResponse me(@AuthenticationPrincipal CustomUserDetails principal) {
+    return UserResponse.from(principal.getUser());
+  } // 당연히 인증되어야 접근 가능, 인증되지 않았을 때 CustomUserDetails null 이기 때문에 반드시 인증 과정 거치도록 한다
 
 }
