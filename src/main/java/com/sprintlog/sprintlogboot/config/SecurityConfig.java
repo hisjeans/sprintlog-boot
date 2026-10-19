@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import com.sprintlog.sprintlogboot.filter.RequestIdFilter;
 import com.sprintlog.sprintlogboot.filter.RequestLoggingFilter;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -44,7 +46,9 @@ public class SecurityConfig {
       // AuthenticationEntryPoint, AccessDeniedHandler는 밑에 빈 등록 로직이 작성되어 있으므로,
       // securityFilterChain이 호출될 때 등록된 빈이 전달되도록 세팅
       AuthenticationEntryPoint restAuthenticationEntryPoint,
-      AccessDeniedHandler restAccessDeniedHandler
+      AccessDeniedHandler restAccessDeniedHandler,
+      PersistentTokenRepository persistentTokenRepository,
+      UserDetailsService userDetailsService
       ) throws Exception {
     http
         // csrf 나인것처럼 요청 보냈을 때, 쿠키 실어보낼 일 없다, 요청 헤더에 토큰 값 넣어 전달
@@ -120,11 +124,20 @@ public class SecurityConfig {
             .defaultSuccessUrl("/api/v1/auth/whoami", true) // 로그인 성공 시 이동할 url, 보통 메인 페이지, 현재는 없으므로 다른 url 지정
             .permitAll() // 로그인 요청을 누구나 접근 가능, 로그인은 인증 받지 않은 사람들이 들어오는 곳이기 때문
         ) // 람다식 익명 객체 설정
+        .rememberMe(remember->remember
+            .key("sprintlog-rememberme-secret-key") // 토큰 서명에 사용하는 비밀 키, 운영 레벨에서는 당연히 노출되면 안 된다, 값 바뀌면 모든 레벨 무효화, 운영 레벨에서는 환경 변수로 노출하는 것을 권장한다
+            .rememberMeParameter("remember-me") // 로그인 폼의 checkbox name과 불일치
+            // checkbox 같은 경우 사용자가 화면 보고 체크하는데 요청이 들어왔을 때 remember-me 파라미터 확인, 있으면 동작, 없으면 동작시키지 않는다
+            .tokenValiditySeconds(60 * 60 * 24 * 14) // 곱하기 연산으로 작성하는 것이 가독성 좋다, 기간 임의로 설정한 것, 14일
+            .tokenRepository(persistentTokenRepository) // 영구 토큰을 저장/조회할 곳
+            .userDetailsService(userDetailsService) // rememberme 쿠키 자체 유효할 경우 쿠키를 찾는다, 쿠키가 유효할 때 email로 사용자를 다시 로드하는 다리 역할 객체 
+        )
+
         .logout(logout->logout
             .logoutUrl("/logout") // Spring Security가 알아서 인식, POST /logout 으로 로그아웃
             .logoutSuccessUrl("/login.html?logout") // 로그아웃 성공하면 보통 메인 페이지 이동, 현재는 없으니 간단한 정보만 남긴다, 로그아웃 완료 후 이동
             .invalidateHttpSession(true) // 세션 무효화(기본값이지만 명시 선호)
-            .deleteCookies("JSESSIONID") // 세션 쿠키 삭제
+            .deleteCookies("JSESSIONID", "remember-me") // 세션 쿠키 삭제, 자동 로그인 쿠키도 삭제
         ) // 사용자의 정보를 서버가 영원히 유지할 수 없다, 사용자가 원할 때는 연결 끊어줄 수 있어야 한다
         
         .addFilterBefore(new RequestIdFilter(), UsernamePasswordAuthenticationFilter.class)

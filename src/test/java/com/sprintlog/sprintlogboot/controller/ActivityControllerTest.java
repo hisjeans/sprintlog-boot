@@ -20,6 +20,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -51,6 +53,15 @@ class ActivityControllerTest {
 
   @MockitoBean
   FileService fileService;
+
+  // SecurityConfig가 Remember-me 용으로 PersistentTokenRepository와 UserDetailsService를 요구하게 된다
+  // 여기는 Controller 슬라이스 테스트이고, @WebMvcTest는 DB를 실제로 사용하지 않기 때문에 빈 등록이 진행되지 않는다
+  // 테스트 실패를 방지하기 위해 가짜로 채운다
+  @MockitoBean
+  PersistentTokenRepository persistentTokenRepository;
+
+  @MockitoBean
+  UserDetailsService userDetailsService;
 
   private LearningActivity sample;
 
