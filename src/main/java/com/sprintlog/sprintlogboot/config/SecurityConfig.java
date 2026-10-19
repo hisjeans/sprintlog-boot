@@ -82,7 +82,27 @@ public class SecurityConfig {
                 .accessDeniedHandler(restAccessDeniedHandler)
             ) // 익명 객체 이용해 등록, customizer 인터페이스 구현한 익명 객체 방식으로 전달
         // Customize 인터페이스 구현한 객체 전달 - 추상 메서드 1, 즉석 람다식으로 전달 가능
-        .httpBasic(Customizer.withDefaults())
+        // HTTP Basic 인증을 켠다 (Authorization 헤더에 Basic < email:password(Base64)> 형식으로 전달되면
+        // DaoAuthenticationProvider를 통해 로그인 검증을 수행하고 SecurityContext에 인증을 채운다
+        // 매 요청마다 자격증명을 실어 보내는 무상태(stateless) 방식
+        .httpBasic(Customizer.withDefaults()) // disables 걸면 사용하지 않겠다
+
+        // 폼 로그인 (세션 기반) 켠다
+        // 한 번 로그인하면 서버가 세션을 만들고 JSESSIONID 쿠키를 발급한다
+        // 그 이후의 요청은 그 쿠키만으로 인증 유지된다 - 상태 유지(stateful) 방식
+        .formLogin(form->form
+            .loginPage("/login.html") // 우리가 만들 로그인 페이지
+            .loginProcessingUrl("/login") // 로그인 처리되는 url, 폼이 POST 처리되는 URL(Spring이 가로챈다, 우리가 직접 만들지 않는다)
+            .defaultSuccessUrl("/api/v1/auth/whoami", true) // 로그인 성공 시 이동할 url, 보통 메인 페이지, 현재는 없으므로 다른 url 지정
+            .permitAll() // 로그인 요청을 누구나 접근 가능, 로그인은 인증 받지 않은 사람들이 들어오는 곳이기 때문
+        ) // 람다식 익명 객체 설정
+        .logout(logout->logout
+            .logoutUrl("/logout") // Spring Security가 알아서 인식, POST /logout 으로 로그아웃
+            .logoutSuccessUrl("/login.html?logout") // 로그아웃 성공하면 보통 메인 페이지 이동, 현재는 없으니 간단한 정보만 남긴다, 로그아웃 완료 후 이동
+            .invalidateHttpSession(true) // 세션 무효화(기본값이지만 명시 선호)
+            .deleteCookies("JSESSIONID") // 세션 쿠키 삭제
+        ) // 사용자의 정보를 서버가 영원히 유지할 수 없다, 사용자가 원할 때는 연결 끊어줄 수 있어야 한다
+        
         .addFilterBefore(new RequestIdFilter(), UsernamePasswordAuthenticationFilter.class)
         // RequestLoggingFilter 객체를 생성해 필터로 추가할텐데 UsernamePasswordAuthenticationFilter 전에 끼워넣겠다
         // 로그인 필터 처리 전 앞 쪽에 끼워넣었다 생각
