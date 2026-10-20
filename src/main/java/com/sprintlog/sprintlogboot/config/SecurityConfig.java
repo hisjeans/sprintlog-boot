@@ -19,6 +19,8 @@ import com.sprintlog.sprintlogboot.security.LoginSuccessHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import com.sprintlog.sprintlogboot.security.SpaCsrfTokenRequestHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -62,7 +64,10 @@ public class SecurityConfig {
         // 세션 쿠키 기반 -> csrf on, 토큰 기반 사용자 정보 유지 -> csrf off
         // 대부분 REST API 토큰 기반 인증 방식이므로 csrf off, 세션/폼 기반 인증 방식은 csrf on
         // REST API는 브라우저 세션 폼이 아니라 클라이언트가 직접 요청하므로 지금 단계에서는 CSRF 보호를 끈다 (세션/폼 기반으로 넘어갈 때 다시 다룬다)
-        .csrf(csrf->csrf.disable()) // Customize 인터페이스 구현한 빈 전달 - 클래스 직접 만들지 않고 람다식으로 선언
+        .csrf(csrf->csrf
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) // csrf
+            .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+        ) // Customize 인터페이스 구현한 빈 전달 - 클래스 직접 만들지 않고 람다식으로 선언
 
         // CORS (교차 출처 자원 공유) 다른 출처의 브라우저 요청을 허용
         // Customizer.withDefaults(): 등록된 빈 중 CorsConfigurationSource 타입의 빈이 있다면 기본 적용하겠다 

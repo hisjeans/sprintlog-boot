@@ -3,6 +3,8 @@ package com.sprintlog.sprintlogboot.controller;
 import com.sprintlog.sprintlogboot.dto.response.UserResponse;
 import com.sprintlog.sprintlogboot.security.CustomUserDetails;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
 import java.util.Map;
 import java.util.List;
 import org.springframework.security.core.Authentication;
@@ -45,4 +47,12 @@ public class AuthController {
     return UserResponse.from(principal.getUser());
   } // 당연히 인증되어야 접근 가능, 인증되지 않았을 때 CustomUserDetails null 이기 때문에 반드시 인증 과정 거치도록 한다
 
+
+  @GetMapping("/csrf-token")
+  public ResponseEntity<Object> csrfToken(CsrfToken csrfToken){
+    csrfToken.getToken(); // 스프링 미리 토큰 생성하지 않기 때문에 토큰 강제로 생성
+    // 내용은 딱히 없고, csrf 토큰을 한번 더 가져오라는 명령을 내린다
+    // 이 요청이 들어오는 과정에서 필터가 동작해 자동으로 쿠키를 생성한다
+    return ResponseEntity.noContent().build(); // csrf 동작해 자동으로 쿠키 내보내준다
+  }
 }
