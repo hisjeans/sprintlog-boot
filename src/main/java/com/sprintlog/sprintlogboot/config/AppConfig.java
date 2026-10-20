@@ -13,7 +13,7 @@ import java.time.Clock;
 // 명시적으로 설정 클래스임을 보여줌
 // 나중에 property가 여러개가 될 수 있음 그때마다 각각의 component에 붙이는 것 보다 한곳에서 관리해주자
 @Configuration
-@EnableConfigurationProperties(SprintLogProperties.class)
+@EnableConfigurationProperties({SprintLogProperties.class, JwtProperties.class}) // AppConfig가 JwtProperties를 켜준다, 누군가 활성화시켜줘야 한다
 public class AppConfig {
     // 리턴되는 Clock 객체 bean으로
     // 클래스에 bean 등록하면 클래스 이름으로 등록되고 메서드에 등록하면 메서드 이름으로 등록됨

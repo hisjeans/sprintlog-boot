@@ -87,3 +87,13 @@ sprintlog:
     count: "4"
   file-directory: "/Users/apple/Desktop/codeit13-develop/spring-upload"
 
+
+  # secret: HS256 서명 비밀키 최소 32 바이트(256비트) 이상 - 짧으면 예외 발생!
+  # 운영 환경에서는 비밀키 노출 조심! 코드/설정 파일에 두지 않고 환경 변수로 주입 권장
+  jwt:
+    secret: ${JWT_SECRET:sprintlog-jwt-secret-key-32bytes!}
+    # 로컬에서 실습하기 때문에 현재는 이렇게 작성했지만 실제로는 JWT_SECRET 환경변수에 민감한 키를 넣어야 한다.
+    # 비밀키 값은 32bytes 이상이어야 한다
+    access-token-validity: 10m
+    issuer: sprintlog
+
