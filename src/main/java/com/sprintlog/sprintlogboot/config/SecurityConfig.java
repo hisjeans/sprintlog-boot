@@ -1,5 +1,7 @@
 package com.sprintlog.sprintlogboot.config;
 
+import org.springframework.security.core.session.SessionRegistryImpl;
+import org.springframework.security.core.session.SessionRegistry;
 import java.util.List;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -57,7 +59,8 @@ public class SecurityConfig {
       PersistentTokenRepository persistentTokenRepository,
       UserDetailsService userDetailsService,
       AuthenticationSuccessHandler loginSuccessHandler,
-      AuthenticationFailureHandler loginFailureHandler
+      AuthenticationFailureHandler loginFailureHandler,
+      SessionRegistry sessionRegistry
       ) throws Exception {
     http
         // csrf 나인것처럼 요청 보냈을 때, 쿠키 실어보낼 일 없다, 요청 헤더에 토큰 값 넣어 전달
@@ -81,22 +84,32 @@ public class SecurityConfig {
 
         // 서버로 들어오는 요청 중 어떤 요청을 허용할 것인가에 대한 설정
         // 이 안에서 경로별 인증 및 권한 체크 진행 가능
+        // "**": /api/v1/admin/user(admin 뒤에 경로 하나), /api/v1/admin/temp/board(admin 하위 경로 두 칸) 하위 경로 몇 칸이든 가능
+        // "*": 하위 경로 하나 허용
+        // ActivityController가 @RequestMapping({"api/v1/activities","/api/activities"}) 선언되어 있어 두 경로 모두 허용
+        // 사전에 로그인된 것만 허용
+        //.authenticated() // 모든 요청은 인증된 사용자만 접근 가능, 로그인 안 한 상태라면 무조건 이 단계에서 막힌다
+        // 필터 단에서 발생한 커스텀 예외 처리 등록
         .authorizeHttpRequests(auth->auth
-                // "**": /api/v1/admin/user(admin 뒤에 경로 하나), /api/v1/admin/temp/board(admin 하위 경로 두 칸) 하위 경로 몇 칸이든 가능
-                // "*": 하위 경로 하나 허용
-                .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll() // 원래는 전체를 잠그고 허용할 몇 가지 방식만 열어주는 것이 보안상 안전하지만, 현재는 예외적으로 허용
+                // ── 공개(permitAll) — 로그인 전에도 되어야 하는 것들 ──
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/csrf-token").permitAll()  // CSRF 토큰 발급 - 인증 필요 없이 되도록
+                .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()           // 회원가입
+                .requestMatchers("/login", "/logout").permitAll()                        // 로그인·로그아웃 처리
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/whoami").permitAll()       // 익명 확인용 데모
+                .requestMatchers(HttpMethod.GET, "/api/v1/activities/**", "/api/activities/**").permitAll() // 활동 조회는 공개(SprintLog 도메인) - 일반적인 사이트도 게시글 조회는 로그인하지 않고도 가능하게 하는 경우가 있다
+                .requestMatchers("/", "/login.html", "/index.html", "/favicon.svg", "/assets/**").permitAll() // 정적 리소스 - 이미지, 자바스크립트, CSS 등 사용한다면 인증 없이 전부 사용할 수 있도록 열어둬야 한다
+                .requestMatchers("/h2-console/**", "/my-api").permitAll() // h2 인메모리 데이터베이스도 인증 없이 접근 가능하도록 해야 한다 (Swagger도 열어 두어야 한다, actuator는 열면 안 된다)
+                // ── 역할 기반 ──
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/me/**").hasRole("USER")
-                // ActivityController가 @RequestMapping({"api/v1/activities","/api/activities"}) 선언되어 있어 두 경로 모두 허용
-                // 사전에 로그인된 것만 허용
-                .requestMatchers(HttpMethod.POST, "/api/v1/activities/**", "/api/activities/**").authenticated()
-                .requestMatchers(HttpMethod.PUT, "/api/v1/activities/**", "/api/activities/**").authenticated()
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/activities/**", "/api/activities/**").authenticated()
-                .requestMatchers("api/v1/auth/me").authenticated()
-                //.authenticated() // 모든 요청은 인증된 사용자만 접근 가능, 로그인 안 한 상태라면 무조건 이 단계에서 막힌다
-                .anyRequest().permitAll() // permitAll 로 설정되어 있어도 들어오는 사람 누구인지에 대한 로직은 정상적으로 들어간다, 나중에 인가 로직 추가
-        )
-        // 필터 단에서 발생한 커스텀 예외 처리 등록
+                // 권한 변경 API 는 관리자만(메서드 레벨 @PreAuthorize 와 두 겹).
+                .requestMatchers(HttpMethod.PUT, "/api/v1/auth/role").hasRole("ADMIN")
+                // ── 그 외 전부 로그인 필요(기본 잠금) ──
+                //   활동 쓰기(POST/PUT/DELETE)·현재 사용자(/me) 등은 자동으로 여기에 걸린다.
+                //   소유권 등 세밀한 검사는 서비스의 @PreAuthorize 가 이어서 한다(두 겹 방어).
+                .anyRequest().authenticated()
+        ) // Customize 인터페이스 구현한 객체 전달 - 추상 메서드 1, 즉석 람다식으로 전달 가능
+
         .sessionManagement(session->session
             //.sessionCreationPolicy(SessionCreationPolicy.STATELESS)// jwt는 세션 사용하지 않는다
             .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // 로그인 성공하면 세션 필요
@@ -113,6 +126,7 @@ public class SecurityConfig {
                     .maximumSessions(1) // 한 사용자 당 최대 세션 수, 1개로 제한했다=동시 로그인 절대 불가능하게 하겠다는 의미
                     .maxSessionsPreventsLogin(false) // false: 새 로그인 시 이전 세션 만료, true: 이미 로그인 되어 있다면 새 로그인 차단
                     .expiredUrl("/login.html?expired") // 동시성 세션 안에서 만료된 세션(이전 세션) 어디로 보낼지
+                    .sessionRegistry(sessionRegistry) // 세션 레지스트리 빈 등록, 권한 변경되었을 때 직접 세션을 찾기 위해
                     // .invalidSession: 진짜 세션 만료되었을 때 설정 != expiredUrl: 동시 요청 만료된 세션, 이전 세션이 만료되었을 때 설정
                     // 경로가 같다고 해서 같은 의미가 아니다, expiredUrl은 동시성 세션 만료 시 이동할 경로, invalidSessionUrl은 진짜 세션 만료 시 이동할 경로
                 )
@@ -238,6 +252,11 @@ public class SecurityConfig {
     source.registerCorsConfiguration("/**", config);
 
     return source;
+  }
+
+  @Bean
+  public SessionRegistry sessionRegistry(){
+    return new SessionRegistryImpl();
   }
 
   @Bean

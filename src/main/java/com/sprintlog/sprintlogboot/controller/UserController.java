@@ -1,5 +1,8 @@
 package com.sprintlog.sprintlogboot.controller;
 
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.sprintlog.sprintlogboot.dto.RoleUpdateRequest;
 import com.sprintlog.sprintlogboot.dto.request.SignUpRequest;
 import com.sprintlog.sprintlogboot.dto.response.UserResponse;
 import com.sprintlog.sprintlogboot.service.UserService;
@@ -27,4 +30,10 @@ public class UserController {
     return ResponseEntity.created(location).body(register);
   }
   // 회원가입은 아직 인증을 거치지 않은 사용자 대상
+
+  @PutMapping("/role")
+  @PreAuthorize("hasRole('ADMIN')")
+  public ResponseEntity<UserResponse> changeRole(@Valid @RequestBody RoleUpdateRequest request) {
+    return ResponseEntity.ok().body(userService.changeRole(request.email(), request.role()));
+  }
 }

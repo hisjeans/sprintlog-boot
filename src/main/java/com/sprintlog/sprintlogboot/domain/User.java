@@ -98,4 +98,9 @@ public class User extends BaseEntity {
     this.role=role;
   }
 
+
+  public void changeRole(Role newRole) {
+    this.role=newRole;
+  }
+  // 현재 엔티티는 setter 구축하지 않으니 필요할 때마다 생성
 }
